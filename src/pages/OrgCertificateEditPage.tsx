@@ -62,6 +62,14 @@ export function OrgCertificateEditPage() {
         doc_issue_date: cert.doc_issue_date,
         is_same_person: cert.is_same_person,
         expense_amount: cert.expense_amount,
+        student_last_name: cert.student_last_name,
+        student_first_name: cert.student_first_name,
+        student_patronymic: cert.student_patronymic,
+        student_inn: cert.student_inn,
+        student_birth_date: cert.student_birth_date || null,
+        student_doc_type_code: cert.student_doc_type_code,
+        student_doc_series_number: cert.student_doc_series_number,
+        student_doc_issue_date: cert.student_doc_issue_date || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -264,6 +272,41 @@ export function OrgCertificateEditPage() {
               />
             </FormField>
           </Section>
+
+          {cert.is_same_person === 0 && (
+            <Section title="Данные обучаемого (стр. 2)">
+              <div className="grid grid-cols-3 gap-3">
+                <FormField label="Фамилия">
+                  <Input value={cert.student_last_name} onChange={(e) => updateField('student_last_name', e.target.value)} />
+                </FormField>
+                <FormField label="Имя">
+                  <Input value={cert.student_first_name} onChange={(e) => updateField('student_first_name', e.target.value)} />
+                </FormField>
+                <FormField label="Отчество">
+                  <Input value={cert.student_patronymic} onChange={(e) => updateField('student_patronymic', e.target.value)} />
+                </FormField>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="ИНН">
+                  <Input value={cert.student_inn} onChange={(e) => updateField('student_inn', e.target.value.replace(/\D/g, '').slice(0, 12))} />
+                </FormField>
+                <FormField label="Дата рождения">
+                  <Input type="date" value={cert.student_birth_date || ''} onChange={(e) => updateField('student_birth_date', e.target.value)} />
+                </FormField>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField label="Код документа">
+                  <Input value={cert.student_doc_type_code} onChange={(e) => updateField('student_doc_type_code', e.target.value)} />
+                </FormField>
+                <FormField label="Серия и номер">
+                  <Input value={cert.student_doc_series_number} onChange={(e) => updateField('student_doc_series_number', e.target.value)} />
+                </FormField>
+                <FormField label="Дата выдачи">
+                  <Input type="date" value={cert.student_doc_issue_date || ''} onChange={(e) => updateField('student_doc_issue_date', e.target.value)} />
+                </FormField>
+              </div>
+            </Section>
+          )}
         </div>
       </div>
     </OrgLayout>

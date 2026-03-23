@@ -32,6 +32,14 @@ const initialFormData: CertificateFormData = {
   doc_issue_date: '',
   is_same_person: 1,
   expense_amount: 0,
+  student_last_name: '',
+  student_first_name: '',
+  student_patronymic: '',
+  student_inn: '',
+  student_birth_date: '',
+  student_doc_type_code: '03',
+  student_doc_series_number: '',
+  student_doc_issue_date: '',
 };
 
 export function PdfForm({ orgId, orgInn, orgKpp, orgName, orgLocked = false }: PdfFormProps) {
@@ -423,6 +431,157 @@ export function PdfForm({ orgId, orgInn, orgKpp, orgName, orgLocked = false }: P
         <div className="border-t border-gray-300 pt-2 text-[8px] text-gray-500 space-y-0.5">
           <p><sup>1</sup> Отчество указывается при наличии (относится ко всем листам документа).</p>
           <p><sup>2</sup> ИНН указывается при наличии.</p>
+        </div>
+      </div>
+
+      <div
+        className="bg-white text-black font-serif shadow-lg mx-auto mt-8"
+        style={{
+          width: '210mm',
+          minHeight: '297mm',
+          padding: '10mm 15mm',
+          fontSize: '10px',
+          lineHeight: '1.4',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <div className="border-2 border-black p-1 text-center font-mono text-[9px] leading-tight">
+            <div className="border border-black px-2 py-0.5 mb-0.5">||||||||||||||||</div>
+            <div className="flex gap-4 justify-center">
+              <span>2710</span>
+              <span>1025</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1 items-end">
+            <div className="flex items-baseline gap-1">
+              <span className="text-[10px] whitespace-nowrap">ИНН</span>
+              <CellRow chars={padChars(formData.org_inn, 12)} />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[10px] whitespace-nowrap">КПП</span>
+              <CellRow chars={padChars(formData.org_kpp, 9)} />
+              <span className="text-[10px]">Стр.</span>
+              <CellRow chars={['0', '0', '2']} />
+            </div>
+          </div>
+        </div>
+
+        <p className="text-[10px] mb-2 mt-4">
+          Данные физического лица, которому оказаны образовательные услуги<sup>1</sup>:
+        </p>
+
+        <div className="space-y-1 mb-2">
+          <LabeledCellInput
+            label="Фамилия"
+            value={formData.student_last_name}
+            maxLength={36}
+            onChange={(v) => updateField('student_last_name', v)}
+            filter="cyrillic_name"
+            hasError={!!errors.student_last_name}
+            className="block"
+          />
+          <LabeledCellInput
+            label="Имя"
+            value={formData.student_first_name}
+            maxLength={36}
+            onChange={(v) => updateField('student_first_name', v)}
+            filter="cyrillic_name"
+            hasError={!!errors.student_first_name}
+            className="block"
+          />
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[10px]">Отчество<sup>1</sup></span>
+            <CellInput
+              value={formData.student_patronymic}
+              maxLength={36}
+              onChange={(v) => updateField('student_patronymic', v)}
+              filter="cyrillic_name"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2">
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[10px]">ИНН<sup>2</sup></span>
+            <CellInput
+              value={formData.student_inn}
+              maxLength={12}
+              onChange={(v) => updateField('student_inn', v)}
+              filter="digits"
+            />
+          </div>
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-[10px]">Дата рождения</span>
+            <DateCellInput
+              value={formData.student_birth_date}
+              onChange={(v) => updateField('student_birth_date', v)}
+              hasError={!!errors.student_birth_date}
+            />
+          </span>
+        </div>
+
+        <p className="text-[10px] mb-1">Сведения о документе, удостоверяющем личность:</p>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-1">
+          <div className="flex items-baseline gap-1">
+            <span className="text-[10px]">Код вида документа</span>
+            <DocTypeSelect
+              value={formData.student_doc_type_code}
+              onChange={(v) => updateField('student_doc_type_code', v)}
+              hasError={!!errors.student_doc_type_code}
+            />
+            <CellInput
+              value={formData.student_doc_type_code}
+              maxLength={2}
+              onChange={(v) => updateField('student_doc_type_code', v)}
+              filter="digits"
+              hasError={!!errors.student_doc_type_code}
+            />
+          </div>
+          <LabeledCellInput
+            label="Серия и номер"
+            value={formData.student_doc_series_number}
+            maxLength={20}
+            onChange={(v) => updateField('student_doc_series_number', v)}
+            hasError={!!errors.student_doc_series_number}
+          />
+        </div>
+        <div className="mb-3">
+          <span className="inline-flex items-baseline gap-1">
+            <span className="text-[10px]">Дата выдачи</span>
+            <DateCellInput
+              value={formData.student_doc_issue_date}
+              onChange={(v) => updateField('student_doc_issue_date', v)}
+              hasError={!!errors.student_doc_issue_date}
+            />
+          </span>
+        </div>
+
+        <div className="flex-1" />
+
+        <div className="border-t border-gray-300 pt-2 text-[8px] text-gray-500 space-y-0.5 mb-4">
+          <p><sup>1</sup> Данные заполняются, если налогоплательщик и обучаемый не являются одним лицом.</p>
+          <p><sup>2</sup> ИНН указывается при наличии.</p>
+        </div>
+
+        <div className="text-center text-[10px] mb-2">
+          <div>Достоверность и полноту сведений, указанных на данной странице, подтверждаю:</div>
+        </div>
+
+        <div className="flex items-baseline gap-4 mb-4">
+          <span className="text-[10px]">_______________</span>
+          <span className="text-[8px] text-gray-500">(подпись)</span>
+          <span className="inline-flex items-baseline gap-1 ml-auto">
+            <CellRow chars={padChars('', 2)} />
+            <span className="mx-0.5 text-[10px]">.</span>
+            <CellRow chars={padChars('', 2)} />
+            <span className="mx-0.5 text-[10px]">.</span>
+            <CellRow chars={padChars('', 4)} />
+          </span>
+          <span className="text-[8px] text-gray-500">(дата)</span>
         </div>
 
         <div className="mt-6 pt-4 border-t border-gray-200">

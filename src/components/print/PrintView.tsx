@@ -3,6 +3,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Certificate } from '../../types/certificate';
 import { PrintPage } from './PrintPage';
+import { PrintPage2 } from './PrintPage2';
 
 interface PrintViewProps {
   certificateId: string;
@@ -60,8 +61,10 @@ export function PrintView({ certificateId, onBack }: PrintViewProps) {
         </div>
       </div>
 
-      <div className="print:m-0 print:p-0 max-w-[900px] mx-auto p-4">
+      <div className="print:m-0 print:p-0 max-w-[900px] mx-auto p-4 space-y-8 print:space-y-0">
         <PrintPage cert={cert} />
+        <div className="print:break-before-page" />
+        <PrintPage2 cert={cert} />
       </div>
     </div>
   );

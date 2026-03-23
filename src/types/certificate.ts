@@ -18,6 +18,14 @@ export interface Certificate {
   doc_issue_date: string;
   is_same_person: number;
   expense_amount: number;
+  student_last_name: string;
+  student_first_name: string;
+  student_patronymic: string;
+  student_inn: string;
+  student_birth_date: string | null;
+  student_doc_type_code: string;
+  student_doc_series_number: string;
+  student_doc_issue_date: string | null;
   signer_full_name: string;
   sign_date: string | null;
   status: 'draft' | 'completed' | 'printed';
@@ -41,6 +49,14 @@ export interface CertificateFormData {
   doc_issue_date: string;
   is_same_person: number;
   expense_amount: number;
+  student_last_name: string;
+  student_first_name: string;
+  student_patronymic: string;
+  student_inn: string;
+  student_birth_date: string;
+  student_doc_type_code: string;
+  student_doc_series_number: string;
+  student_doc_issue_date: string;
 }
 
 export interface Organization {

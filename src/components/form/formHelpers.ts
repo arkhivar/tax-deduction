@@ -56,5 +56,33 @@ export function validateForm(data: CertificateFormData): FormErrors {
     errors.expense_amount = 'Укажите сумму расходов';
   }
 
+  if (data.is_same_person === 0) {
+    if (!data.student_last_name.trim()) {
+      errors.student_last_name = 'Обязательное поле';
+    } else if (!isCyrillicName(data.student_last_name)) {
+      errors.student_last_name = 'Используйте только русские буквы';
+    }
+    if (!data.student_first_name.trim()) {
+      errors.student_first_name = 'Обязательное поле';
+    } else if (!isCyrillicName(data.student_first_name)) {
+      errors.student_first_name = 'Используйте только русские буквы';
+    }
+    if (data.student_patronymic.trim() && !isCyrillicName(data.student_patronymic)) {
+      errors.student_patronymic = 'Используйте только русские буквы';
+    }
+    if (!data.student_birth_date) {
+      errors.student_birth_date = 'Укажите дату рождения';
+    }
+    if (!data.student_doc_type_code) {
+      errors.student_doc_type_code = 'Выберите тип документа';
+    }
+    if (!data.student_doc_series_number.trim()) {
+      errors.student_doc_series_number = 'Укажите серию и номер';
+    }
+    if (!data.student_doc_issue_date) {
+      errors.student_doc_issue_date = 'Укажите дату выдачи';
+    }
+  }
+
   return errors;
 }

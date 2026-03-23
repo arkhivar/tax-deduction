@@ -4,6 +4,7 @@ import { Printer, ArrowLeft, QrCode, Stamp, PenLine } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Certificate } from '../types/certificate';
 import { PrintPage } from '../components/print/PrintPage';
+import { PrintPage2 } from '../components/print/PrintPage2';
 import { useOrg } from '../contexts/OrgContext';
 
 export function OrgPrintPage() {
@@ -71,8 +72,10 @@ export function OrgPrintPage() {
           </div>
         </div>
       </div>
-      <div className="print:m-0 print:p-0 max-w-[900px] mx-auto p-4">
+      <div className="print:m-0 print:p-0 max-w-[900px] mx-auto p-4 space-y-8 print:space-y-0">
         <PrintPageWithOverlays cert={cert} overlays={overlays} />
+        <div className="print:break-before-page" />
+        <PrintPage2 cert={cert} />
       </div>
     </div>
   );
