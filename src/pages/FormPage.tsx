@@ -16,6 +16,7 @@ export function FormPage() {
   const identifier = orgInn || slug;
 
   const [orgData, setOrgData] = useState<{ id: string; inn: string; kpp: string; name: string; full_name: string | null } | null>(null);
+  const [prefillInn, setPrefillInn] = useState<string | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(!!identifier);
   const [notFound, setNotFound] = useState(false);
 
@@ -70,6 +71,8 @@ export function FormPage() {
 
       if (data) {
         setOrgData(data);
+      } else if (/^\d{10}$/.test(identifier)) {
+        setPrefillInn(identifier);
       } else {
         setNotFound(true);
       }
@@ -137,7 +140,11 @@ export function FormPage() {
             onNewForm={handleNewForm}
           />
         ) : (
-          <PdfForm formId={formId} onNewForm={handleNewForm} />
+          <PdfForm
+            formId={formId}
+            orgInn={prefillInn || undefined}
+            onNewForm={handleNewForm}
+          />
         )}
 
         <footer className="mt-8 pb-8 text-center">

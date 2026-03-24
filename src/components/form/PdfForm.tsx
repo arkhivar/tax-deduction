@@ -107,8 +107,46 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
     }
 
     setSubmitting(true);
+
+    let resolvedOrgId = orgId;
+
+    if (!resolvedOrgId && formData.org_inn.length === 10) {
+      const { data: existingOrg } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('inn', formData.org_inn)
+        .maybeSingle();
+
+      if (existingOrg) {
+        resolvedOrgId = existingOrg.id;
+      } else {
+        const randomPin = String(Math.floor(100000 + Math.random() * 900000));
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert([{
+            inn: formData.org_inn,
+            kpp: formData.org_kpp,
+            name: formData.org_name,
+            pin_code: randomPin,
+          }])
+          .select('id')
+          .maybeSingle();
+
+        if (orgError) {
+          const { data: retryOrg } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('inn', formData.org_inn)
+            .maybeSingle();
+          if (retryOrg) resolvedOrgId = retryOrg.id;
+        } else if (newOrg) {
+          resolvedOrgId = newOrg.id;
+        }
+      }
+    }
+
     const insertData: Record<string, unknown> = { ...formData, id: formId };
-    if (orgId) insertData.org_id = orgId;
+    if (resolvedOrgId) insertData.org_id = resolvedOrgId;
     const { error } = await supabase.from('education_certificates').insert([insertData]);
     setSubmitting(false);
 

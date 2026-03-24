@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, Eye, Printer, Search, Filter } from 'lucide-react';
+import { RefreshCw, Eye, Printer, Search, Filter, Building2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Certificate } from '../../types/certificate';
 import { AdminLayout } from './AdminLayout';
@@ -13,9 +13,10 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 interface CertificateListProps {
   onView: (id: string) => void;
   onPrint: (id: string) => void;
+  onShowOrgs?: () => void;
 }
 
-export function CertificateList({ onView, onPrint }: CertificateListProps) {
+export function CertificateList({ onView, onPrint, onShowOrgs }: CertificateListProps) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -100,6 +101,15 @@ export function CertificateList({ onView, onPrint }: CertificateListProps) {
                 <option value="printed">Напечатанные</option>
               </select>
             </div>
+            {onShowOrgs && (
+              <button
+                onClick={onShowOrgs}
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-sm text-gray-700 transition-colors"
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Организации</span>
+              </button>
+            )}
             <button
               onClick={fetchCertificates}
               className="p-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
