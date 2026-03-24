@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { OrgProvider } from './contexts/OrgContext';
 import { FormPage } from './pages/FormPage';
 import { PrintPage } from './pages/PrintPage';
+import { AdminPage } from './pages/AdminPage';
 import { OrgLoginPage } from './pages/OrgLoginPage';
 import { OrgRegisterPage } from './pages/OrgRegisterPage';
 import { OrgDashboardPage } from './pages/OrgDashboardPage';
@@ -21,6 +22,8 @@ function App() {
           <Route path="/form/:orgInn/:formId" element={<FormPage />} />
           <Route path="/print/:id" element={<PrintPage />} />
           <Route path="/s/:formId" element={<FormPage />} />
+
+          <Route path="/admin" element={<AdminPage />} />
 
           <Route path="/org/login" element={<OrgLoginPage />} />
           <Route path="/org/register" element={<OrgRegisterPage />} />
