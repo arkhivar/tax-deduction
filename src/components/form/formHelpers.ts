@@ -52,6 +52,9 @@ export function validateForm(data: CertificateFormData): FormErrors {
   if (!data.doc_issue_date) {
     errors.doc_issue_date = 'Укажите дату выдачи';
   }
+  if (!data.report_year || data.report_year.length !== 4) {
+    errors.report_year = 'Выберите отчетный год';
+  }
   if (!data.expense_amount || data.expense_amount <= 0) {
     errors.expense_amount = 'Укажите сумму расходов';
   }

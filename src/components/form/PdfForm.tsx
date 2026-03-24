@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, AlertCircle, Lock, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { CertificateFormData } from '../../types/certificate';
 import { validateForm, type FormErrors } from './formHelpers';
@@ -19,10 +19,14 @@ interface PdfFormProps {
   onNewForm?: () => void;
 }
 
+const currentYear = new Date().getFullYear();
+const yearOptions = [currentYear - 1, currentYear - 2, currentYear - 3].map(String);
+
 const initialFormData: CertificateFormData = {
   org_inn: '',
   org_kpp: '',
   org_name: '',
+  report_year: '',
   is_full_time: 0,
   taxpayer_last_name: '',
   taxpayer_first_name: '',
@@ -56,7 +60,6 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [innLoading, setInnLoading] = useState(false);
-  const [pageCount, setPageCount] = useState('2');
 
   const handleInnResult = useCallback((result: { found: boolean; name?: string; full_name?: string; kpp?: string }) => {
     if (result.found) {
@@ -237,13 +240,33 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
         </div>
 
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-3">
-          <LabeledCells label="Номер справки" chars={padChars('', 12)} />
-          <LabeledCells label="Номер корректировки" chars={padChars('', 3)} />
-          <span className="inline-flex items-baseline gap-1">
-            <span className="text-[10px]">Отчетный год</span>
-            <CellRow chars={padChars('', 4)} />
+          <span className="inline-flex items-baseline gap-1 opacity-40" title="Заполняется организацией">
+            <span className="text-[10px] whitespace-nowrap">Номер справки</span>
+            <CellRow chars={padChars('', 12)} />
           </span>
-          <span className="text-[8px] text-gray-400 italic">(заполняется организацией)</span>
+          <span className="inline-flex items-baseline gap-1 opacity-40" title="Заполняется организацией">
+            <span className="text-[10px] whitespace-nowrap">Номер корректировки</span>
+            <CellRow chars={padChars('', 3)} />
+          </span>
+          <span className="inline-flex items-baseline gap-1 relative">
+            <span className="text-[10px]">Отчетный год</span>
+            <select
+              value={formData.report_year}
+              onChange={(e) => updateField('report_year', e.target.value)}
+              className={`
+                font-mono text-[12px] border border-black px-1 py-0 h-[16px] leading-none
+                bg-white appearance-none cursor-pointer
+                focus:outline-none focus:ring-1 focus:ring-blue-400
+                ${errors.report_year ? 'border-red-400 bg-red-50' : ''}
+              `}
+              style={{ fontSize: '12px', minWidth: '72px', direction: 'ltr' }}
+            >
+              <option value="">----</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </span>
         </div>
 
         <div className="mb-2">
@@ -398,7 +421,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           />
         </div>
 
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-4 opacity-40" title="Заполняется организацией">
           <div>
             <div className="text-center text-[10px] mb-2">
               <div className="font-bold">Достоверность и полноту сведений,</div>
@@ -411,17 +434,13 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
               </div>
             ))}
             <p className="text-[8px] text-gray-500 text-center mt-0.5">(фамилия, имя, отчество)</p>
-            <div className="flex items-center gap-1 mt-1">
-              <Lock className="w-2.5 h-2.5 text-gray-400" />
-              <span className="text-[7px] text-gray-400 italic">заполняется организацией</span>
-            </div>
           </div>
           <div className="border border-gray-400 w-24 h-24 flex items-center justify-center text-[9px] text-gray-400">
             Зона QR-кода
           </div>
         </div>
 
-        <div className="flex items-baseline gap-4 mb-4">
+        <div className="flex items-baseline gap-4 mb-4 opacity-40" title="Заполняется организацией">
           <span className="text-[10px]">Подпись _______________</span>
           <span className="inline-flex items-baseline gap-1">
             <span className="text-[10px]">Дата</span>
@@ -433,9 +452,9 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           </span>
         </div>
 
-        <div className="flex items-baseline gap-1 mb-6">
+        <div className="flex items-baseline gap-1 mb-6 opacity-40" title="Заполняется организацией">
           <span className="text-[10px]">Справка составлена на</span>
-          <CellInput value={pageCount} maxLength={3} onChange={setPageCount} filter="digits" />
+          <CellRow chars={padChars('2', 3)} />
           <span className="text-[10px]">страницах</span>
         </div>
 
@@ -578,21 +597,23 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           <p><sup>2</sup> ИНН указывается при наличии.</p>
         </div>
 
-        <div className="text-center text-[10px] mb-2">
-          <div>Достоверность и полноту сведений, указанных на данной странице, подтверждаю:</div>
-        </div>
+        <div className="opacity-40" title="Заполняется организацией">
+          <div className="text-center text-[10px] mb-2">
+            <div>Достоверность и полноту сведений, указанных на данной странице, подтверждаю:</div>
+          </div>
 
-        <div className="flex items-baseline gap-4 mb-4">
-          <span className="text-[10px]">_______________</span>
-          <span className="text-[8px] text-gray-500">(подпись)</span>
-          <span className="inline-flex items-baseline gap-1 ml-auto">
-            <CellRow chars={padChars('', 2)} />
-            <span className="mx-0.5 text-[10px]">.</span>
-            <CellRow chars={padChars('', 2)} />
-            <span className="mx-0.5 text-[10px]">.</span>
-            <CellRow chars={padChars('', 4)} />
-          </span>
-          <span className="text-[8px] text-gray-500">(дата)</span>
+          <div className="flex items-baseline gap-4 mb-4">
+            <span className="text-[10px]">_______________</span>
+            <span className="text-[8px] text-gray-500">(подпись)</span>
+            <span className="inline-flex items-baseline gap-1 ml-auto">
+              <CellRow chars={padChars('', 2)} />
+              <span className="mx-0.5 text-[10px]">.</span>
+              <CellRow chars={padChars('', 2)} />
+              <span className="mx-0.5 text-[10px]">.</span>
+              <CellRow chars={padChars('', 4)} />
+            </span>
+            <span className="text-[8px] text-gray-500">(дата)</span>
+          </div>
         </div>
 
         <div className="mt-6 pt-4 border-t border-gray-200">

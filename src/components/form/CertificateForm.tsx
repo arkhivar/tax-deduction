@@ -14,6 +14,7 @@ const initialFormData: CertificateFormData = {
   org_inn: '',
   org_kpp: '',
   org_name: '',
+  report_year: '',
   is_full_time: 0,
   taxpayer_last_name: '',
   taxpayer_first_name: '',

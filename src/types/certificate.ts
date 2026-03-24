@@ -38,6 +38,7 @@ export interface CertificateFormData {
   org_inn: string;
   org_kpp: string;
   org_name: string;
+  report_year: string;
   is_full_time: number;
   taxpayer_last_name: string;
   taxpayer_first_name: string;
