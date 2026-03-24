@@ -18,7 +18,7 @@ export function latinToCyrillic(input: string): string {
 }
 
 const CYRILLIC_LETTER = /[\u0400-\u04FF]/;
-const ALLOWED_CYRILLIC_TEXT = /^[\u0400-\u04FF\s.,\-"'«»()/№;:!+&_@#0-9]*$/;
+const ALLOWED_CYRILLIC_TEXT = /^[\u0400-\u04FFa-zA-Z\s.,\-"'«»()/№;:!+&_@#0-9]*$/;
 
 export function isCyrillicText(input: string): boolean {
   if (!input.trim()) return true;

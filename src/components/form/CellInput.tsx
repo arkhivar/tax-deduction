@@ -7,7 +7,7 @@ interface CellInputProps {
   value: string;
   maxLength: number;
   onChange: (value: string) => void;
-  filter?: 'digits' | 'text' | 'flag' | 'cyrillic' | 'cyrillic_name';
+  filter?: 'digits' | 'text' | 'flag' | 'cyrillic' | 'cyrillic_name' | 'org_text';
   disabled?: boolean;
   hasError?: boolean;
   cellSize?: number;
@@ -43,6 +43,7 @@ export function CellInput({
       else if (filter === 'flag') v = v.replace(/[^01]/g, '');
       else if (filter === 'cyrillic') v = toCyrillicText(v);
       else if (filter === 'cyrillic_name') v = toCyrillicName(v);
+      else if (filter === 'org_text') v = v.replace(/[^\u0400-\u04FFa-zA-Z\s.,\-"'«»()/№;:!+&_@#0-9]/g, '');
       v = v.slice(0, maxLength).toUpperCase();
       onChange(v);
     },

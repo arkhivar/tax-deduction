@@ -325,7 +325,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
                   value={line}
                   maxLength={40}
                   onChange={(v) => handleOrgNameLineChange(formData.org_name, i, v, 40, (name) => updateField('org_name', name))}
-                  filter="cyrillic"
+                  filter="org_text"
                   hasError={!!errors.org_name && i === 0}
                 />
               </div>
