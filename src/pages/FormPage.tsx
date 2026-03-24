@@ -1,20 +1,61 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PdfForm } from '../components/form/PdfForm';
+import { FormStatusView } from '../components/form/FormStatusView';
 import { supabase } from '../lib/supabase';
+import type { Certificate } from '../types/certificate';
+
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
 export function FormPage() {
-  const { orgInn, slug } = useParams<{ orgInn?: string; slug?: string }>();
+  const { orgInn, slug, formId } = useParams<{ orgInn?: string; slug?: string; formId?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const identifier = orgInn || slug;
+
   const [orgData, setOrgData] = useState<{ id: string; inn: string; kpp: string; name: string; full_name: string | null } | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(!!identifier);
   const [notFound, setNotFound] = useState(false);
+
+  const [existingCert, setExistingCert] = useState<Certificate | null>(null);
+  const [checkingForm, setCheckingForm] = useState(!!formId);
+
+  useEffect(() => {
+    if (!formId) {
+      const newId = generateId();
+      const path = location.pathname.replace(/\/$/, '');
+      if (path === '' || path === '/form') {
+        navigate(`/s/${newId}`, { replace: true });
+      } else if (orgInn) {
+        navigate(`/form/${orgInn}/${newId}`, { replace: true });
+      } else if (slug) {
+        navigate(`/${slug}/${newId}`, { replace: true });
+      } else {
+        navigate(`/s/${newId}`, { replace: true });
+      }
+      return;
+    }
+
+    const checkExisting = async () => {
+      const { data } = await supabase
+        .from('education_certificates')
+        .select('*')
+        .eq('id', formId)
+        .maybeSingle();
+      if (data) {
+        setExistingCert(data);
+      }
+      setCheckingForm(false);
+    };
+    checkExisting();
+  }, [formId]);
 
   useEffect(() => {
     if (!identifier) return;
     const load = async () => {
       const isInn = /^\d{10}$/.test(identifier);
-
       const { data } = isInn
         ? await supabase
             .from('organizations')
@@ -37,12 +78,24 @@ export function FormPage() {
     load();
   }, [identifier]);
 
-  if (loadingOrg) {
+  if (!formId) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <p className="text-sm text-gray-500">Загрузка...</p>
       </div>
     );
+  }
+
+  if (loadingOrg || checkingForm) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <p className="text-sm text-gray-500">Загрузка...</p>
+      </div>
+    );
+  }
+
+  if (existingCert) {
+    return <FormStatusView cert={existingCert} />;
   }
 
   if (notFound && identifier) {
@@ -59,19 +112,32 @@ export function FormPage() {
     );
   }
 
+  const handleNewForm = () => {
+    const newId = generateId();
+    if (orgInn) {
+      navigate(`/form/${orgInn}/${newId}`);
+    } else if (slug) {
+      navigate(`/${slug}/${newId}`);
+    } else {
+      navigate(`/s/${newId}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-[900px] mx-auto py-8 px-4">
         {orgData ? (
           <PdfForm
+            formId={formId}
             orgId={orgData.id}
             orgInn={orgData.inn}
             orgKpp={orgData.kpp}
             orgName={orgData.full_name || orgData.name}
             orgLocked
+            onNewForm={handleNewForm}
           />
         ) : (
-          <PdfForm />
+          <PdfForm formId={formId} onNewForm={handleNewForm} />
         )}
 
         <footer className="mt-8 pb-8 text-center">

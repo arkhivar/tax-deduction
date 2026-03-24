@@ -10,11 +10,13 @@ import { DocTypeSelect } from './DocTypeSelect';
 import { useInnLookup } from '../../hooks/useInnLookup';
 
 interface PdfFormProps {
+  formId: string;
   orgId?: string;
   orgInn?: string;
   orgKpp?: string;
   orgName?: string;
   orgLocked?: boolean;
+  onNewForm?: () => void;
 }
 
 const initialFormData: CertificateFormData = {
@@ -42,7 +44,7 @@ const initialFormData: CertificateFormData = {
   student_doc_issue_date: '',
 };
 
-export function PdfForm({ orgId, orgInn, orgKpp, orgName, orgLocked = false }: PdfFormProps) {
+export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = false, onNewForm }: PdfFormProps) {
   const [formData, setFormData] = useState<CertificateFormData>({
     ...initialFormData,
     org_inn: orgInn || '',
@@ -102,7 +104,7 @@ export function PdfForm({ orgId, orgInn, orgKpp, orgName, orgLocked = false }: P
     }
 
     setSubmitting(true);
-    const insertData: Record<string, unknown> = { ...formData };
+    const insertData: Record<string, unknown> = { ...formData, id: formId };
     if (orgId) insertData.org_id = orgId;
     const { error } = await supabase.from('education_certificates').insert([insertData]);
     setSubmitting(false);
@@ -116,6 +118,7 @@ export function PdfForm({ orgId, orgInn, orgKpp, orgName, orgLocked = false }: P
   };
 
   if (submitted) {
+    const currentUrl = window.location.href;
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
@@ -125,20 +128,28 @@ export function PdfForm({ orgId, orgInn, orgKpp, orgName, orgLocked = false }: P
         <p className="text-gray-600 text-sm max-w-md text-center">
           Ваши данные приняты. Образовательная организация сформирует справку.
         </p>
-        <button
-          onClick={() => {
-            setSubmitted(false);
-            setFormData({
-              ...initialFormData,
-              org_inn: orgInn || '',
-              org_kpp: orgKpp || '',
-              org_name: orgName || '',
-            });
-          }}
-          className="mt-8 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
-        >
-          Заполнить ещё одну справку
-        </button>
+        <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 max-w-md w-full">
+          <p className="text-xs text-gray-500 mb-1.5">Сохраните эту ссылку для отслеживания статуса:</p>
+          <div className="flex items-center gap-2">
+            <code className="text-xs text-gray-700 bg-white border border-gray-200 rounded px-2 py-1 flex-1 truncate">
+              {currentUrl}
+            </code>
+            <button
+              onClick={() => navigator.clipboard.writeText(currentUrl)}
+              className="shrink-0 px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+            >
+              Копировать
+            </button>
+          </div>
+        </div>
+        {onNewForm && (
+          <button
+            onClick={onNewForm}
+            className="mt-8 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+          >
+            Заполнить ещё одну справку
+          </button>
+        )}
       </div>
     );
   }

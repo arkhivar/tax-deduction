@@ -18,7 +18,9 @@ function App() {
           <Route path="/" element={<FormPage />} />
           <Route path="/form" element={<FormPage />} />
           <Route path="/form/:orgInn" element={<FormPage />} />
+          <Route path="/form/:orgInn/:formId" element={<FormPage />} />
           <Route path="/print/:id" element={<PrintPage />} />
+          <Route path="/s/:formId" element={<FormPage />} />
 
           <Route path="/org/login" element={<OrgLoginPage />} />
           <Route path="/org/register" element={<OrgRegisterPage />} />
@@ -28,6 +30,7 @@ function App() {
           <Route path="/org/settings" element={<OrgGuard><OrgSettingsPage /></OrgGuard>} />
 
           <Route path="/:slug" element={<FormPage />} />
+          <Route path="/:slug/:formId" element={<FormPage />} />
         </Routes>
       </OrgProvider>
     </BrowserRouter>
