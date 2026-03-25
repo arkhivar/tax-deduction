@@ -147,6 +147,9 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
 
     const insertData: Record<string, unknown> = { ...formData, id: formId };
     if (resolvedOrgId) insertData.org_id = resolvedOrgId;
+    for (const key of ['taxpayer_birth_date', 'doc_issue_date', 'student_birth_date', 'student_doc_issue_date', 'sign_date'] as const) {
+      if (insertData[key] === '') insertData[key] = null;
+    }
     const { error } = await supabase.from('education_certificates').insert([insertData]);
     setSubmitting(false);
 
