@@ -145,7 +145,7 @@ export function FormPage() {
   const scaledHeight = contentHeight * zoom;
 
   return (
-    <div className="min-h-screen bg-gray-100 overflow-x-auto">
+    <div className="min-h-screen bg-gray-100 overflow-hidden">
       <div
         className="mx-auto py-8 px-4"
         style={{
