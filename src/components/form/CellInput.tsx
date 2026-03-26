@@ -40,7 +40,10 @@ export function CellInput({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       let v = e.target.value;
       if (filter === 'digits') v = v.replace(/\D/g, '');
-      else if (filter === 'flag') v = v.replace(/[^01]/g, '');
+      else if (filter === 'flag') {
+        v = v.replace(/[^01]/g, '');
+        if (v.length > 1) v = v.slice(-1);
+      }
       else if (filter === 'cyrillic') v = toCyrillicText(v);
       else if (filter === 'cyrillic_name') v = toCyrillicName(v);
       else if (filter === 'org_text') v = v.replace(/[^\u0400-\u04FFa-zA-Z\s.,\-"'«»()/№;:!+&_@#0-9]/g, '');
