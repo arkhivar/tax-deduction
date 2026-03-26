@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PdfForm } from '../components/form/PdfForm';
 import { FormStatusView } from '../components/form/FormStatusView';
+import { ZoomToolbar, DEFAULT_ZOOM } from '../components/form/ZoomToolbar';
 import { supabase } from '../lib/supabase';
 import type { Certificate } from '../types/certificate';
 
@@ -22,6 +23,21 @@ export function FormPage() {
 
   const [existingCert, setExistingCert] = useState<Certificate | null>(null);
   const [checkingForm, setCheckingForm] = useState(!!formId);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [contentHeight, setContentHeight] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContentHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!formId) {
@@ -126,36 +142,54 @@ export function FormPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-[900px] mx-auto py-8 px-4">
-        {orgData ? (
-          <PdfForm
-            formId={formId}
-            orgId={orgData.id}
-            orgInn={orgData.inn}
-            orgKpp={orgData.kpp}
-            orgName={orgData.full_name || orgData.name}
-            orgLocked
-            onNewForm={handleNewForm}
-          />
-        ) : (
-          <PdfForm
-            formId={formId}
-            orgInn={prefillInn || undefined}
-            onNewForm={handleNewForm}
-          />
-        )}
+  const scaledHeight = contentHeight * zoom;
 
-        <footer className="mt-8 pb-8 text-center">
-          <Link
-            to="/org/login"
-            className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            Вход для образовательной организации
-          </Link>
-        </footer>
+  return (
+    <div className="min-h-screen bg-gray-100 overflow-x-auto">
+      <div
+        className="mx-auto py-8 px-4"
+        style={{
+          height: scaledHeight > 0 ? `${scaledHeight + 64}px` : undefined,
+        }}
+      >
+        <div
+          ref={contentRef}
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top center',
+            width: '900px',
+            margin: '0 auto',
+          }}
+        >
+          {orgData ? (
+            <PdfForm
+              formId={formId}
+              orgId={orgData.id}
+              orgInn={orgData.inn}
+              orgKpp={orgData.kpp}
+              orgName={orgData.full_name || orgData.name}
+              orgLocked
+              onNewForm={handleNewForm}
+            />
+          ) : (
+            <PdfForm
+              formId={formId}
+              orgInn={prefillInn || undefined}
+              onNewForm={handleNewForm}
+            />
+          )}
+
+          <footer className="mt-8 pb-8 text-center">
+            <Link
+              to="/org/login"
+              className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Вход для образовательной организации
+            </Link>
+          </footer>
+        </div>
       </div>
+      <ZoomToolbar zoom={zoom} onZoomChange={setZoom} />
     </div>
   );
 }
