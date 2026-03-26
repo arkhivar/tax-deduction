@@ -68,7 +68,6 @@ export function CellInput({
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        maxLength={maxLength}
         disabled={disabled}
         className="sr-only"
         tabIndex={disabled ? -1 : 0}
