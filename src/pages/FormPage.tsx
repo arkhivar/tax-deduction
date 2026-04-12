@@ -186,7 +186,7 @@ export function FormPage() {
 
           <footer className="mt-8 pb-8 text-center">
             <Link
-              to="/org/login"
+              to={identifier ? `/org/login?slug=${identifier}` : '/org/login'}
               className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
             >
               Вход для образовательной организации

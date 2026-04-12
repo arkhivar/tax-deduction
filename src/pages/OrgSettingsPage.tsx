@@ -1,14 +1,13 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Save, CheckCircle, AlertCircle, Copy, Link2, Image } from 'lucide-react';
+import { Upload, X, Save, CheckCircle, AlertCircle, Copy, Link2, Image, Info } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useOrg } from '../contexts/OrgContext';
 import { OrgLayout } from '../components/org/OrgLayout';
 import type { Organization } from '../types/certificate';
 
-function buildPublicLink(org: { slug: string | null; inn: string } | null) {
+function buildPublicLink(org: { slug: string; inn: string } | null) {
   if (!org) return '';
-  const identifier = org.slug || `form/${org.inn}`;
-  return `${window.location.origin}/${identifier}`;
+  return `${window.location.origin}/${org.slug}`;
 }
 
 export function OrgSettingsPage() {
@@ -24,11 +23,6 @@ export function OrgSettingsPage() {
 
   const [signerName, setSignerName] = useState(org?.signer_full_name || '');
   const [signerPosition, setSignerPosition] = useState(org?.signer_position || '');
-
-  const [slug, setSlug] = useState(org?.slug || '');
-  const [slugSaving, setSlugSaving] = useState(false);
-  const [slugError, setSlugError] = useState('');
-  const [slugSaved, setSlugSaved] = useState(false);
 
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -113,50 +107,6 @@ export function OrgSettingsPage() {
     setTimeout(() => setPinSaved(false), 2000);
   };
 
-  const handleSaveSlug = async () => {
-    if (!org) return;
-    setSlugError('');
-    setSlugSaved(false);
-
-    const trimmed = slug.trim().toLowerCase();
-    if (trimmed && !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(trimmed)) {
-      setSlugError('Только латинские буквы, цифры и дефис. Должен начинаться и заканчиваться буквой или цифрой.');
-      return;
-    }
-    if (trimmed && trimmed.length < 3) {
-      setSlugError('Минимум 3 символа');
-      return;
-    }
-    const reserved = ['form', 'org', 'print', 'admin', 'api', 'login', 'register'];
-    if (reserved.includes(trimmed)) {
-      setSlugError('Это имя зарезервировано, выберите другое');
-      return;
-    }
-
-    setSlugSaving(true);
-    const { data, error: dbError } = await supabase
-      .from('organizations')
-      .update({ slug: trimmed || null, updated_at: new Date().toISOString() })
-      .eq('id', org.id)
-      .select()
-      .maybeSingle();
-
-    setSlugSaving(false);
-    if (dbError) {
-      if (dbError.code === '23505') {
-        setSlugError('Этот адрес уже занят. Попробуйте другой.');
-      } else {
-        setSlugError('Ошибка сохранения');
-      }
-      return;
-    }
-    if (data) {
-      refreshOrg(data as Organization);
-      setSlugSaved(true);
-      setTimeout(() => setSlugSaved(false), 2000);
-    }
-  };
-
   const handleCopy = () => {
     navigator.clipboard.writeText(publicLink);
     setCopied(true);
@@ -170,43 +120,21 @@ export function OrgSettingsPage() {
           <p className="text-sm text-gray-600 mb-3">
             Поделитесь этой ссылкой с плательщиками. Данные вашей организации будут предзаполнены.
           </p>
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
             <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
             <code className="flex-1 text-sm text-gray-700 truncate">{publicLink}</code>
             <button onClick={handleCopy} className="shrink-0 p-1.5 rounded-md hover:bg-gray-200 text-gray-500 transition-colors">
               {copied ? <CheckCircle className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
-
-          <div className="border-t border-gray-100 pt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Короткий адрес</label>
-            <p className="text-xs text-gray-500 mb-2">
-              Задайте короткое имя для ссылки вместо ИНН: {window.location.origin}/<span className="font-medium">{slug || 'ваше-имя'}</span>
-            </p>
-            {slugError && (
-              <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg mb-2">
-                <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <p className="text-xs text-red-700">{slugError}</p>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <input
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase().slice(0, 40))}
-                placeholder="my-school"
-                maxLength={40}
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 placeholder:text-gray-400"
-              />
-              <button
-                onClick={handleSaveSlug}
-                disabled={slugSaving}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors disabled:opacity-50 shrink-0"
-              >
-                {slugSaved ? <CheckCircle className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                {slugSaving ? '...' : slugSaved ? 'Сохранено' : 'Сохранить'}
-              </button>
+          {org && org.slug === org.inn && (
+            <div className="flex items-start gap-2 mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700">
+                Хотите красивый короткий адрес вместо ИНН? Свяжитесь с администратором для подключения.
+              </p>
             </div>
-          </div>
+          )}
         </Section>
 
         <Section title="Полное наименование организации">

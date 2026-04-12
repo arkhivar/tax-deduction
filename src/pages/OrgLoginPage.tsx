@@ -1,16 +1,33 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useOrg } from '../contexts/OrgContext';
 
 export function OrgLoginPage() {
+  const [searchParams] = useSearchParams();
+  const slugParam = searchParams.get('slug');
+
   const [inn, setInn] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resolving, setResolving] = useState(!!slugParam);
   const { login } = useOrg();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!slugParam) return;
+    const resolve = async () => {
+      const isInn = /^\d{10}$/.test(slugParam);
+      const { data } = isInn
+        ? await supabase.from('organizations').select('inn').eq('inn', slugParam).maybeSingle()
+        : await supabase.from('organizations').select('inn').eq('slug', slugParam).maybeSingle();
+      if (data) setInn(data.inn);
+      setResolving(false);
+    };
+    resolve();
+  }, [slugParam]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +64,14 @@ export function OrgLoginPage() {
     login(data);
     navigate('/org/dashboard');
   };
+
+  if (resolving) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <p className="text-sm text-gray-500">Загрузка...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">

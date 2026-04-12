@@ -9,7 +9,6 @@ export function OrgRegisterPage() {
   const [inn, setInn] = useState('');
   const [kpp, setKpp] = useState('');
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
@@ -21,9 +20,7 @@ export function OrgRegisterPage() {
   const { login } = useOrg();
   const navigate = useNavigate();
 
-  const publicLink = registeredOrg?.slug
-    ? `${window.location.origin}/${registeredOrg.slug}`
-    : `${window.location.origin}/form/${registeredOrg?.inn || inn}`;
+  const publicLink = `${window.location.origin}/${registeredOrg?.slug || inn}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,23 +32,6 @@ export function OrgRegisterPage() {
     if (pin.length !== 6) { setError('ПИН-код должен содержать 6 цифр'); return; }
     if (pin !== pinConfirm) { setError('ПИН-коды не совпадают'); return; }
 
-    const slugTrimmed = slug.trim().toLowerCase();
-    if (slugTrimmed) {
-      if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(slugTrimmed)) {
-        setError('Короткий адрес: только латинские буквы, цифры и дефис');
-        return;
-      }
-      if (slugTrimmed.length < 3) {
-        setError('Короткий адрес: минимум 3 символа');
-        return;
-      }
-      const reserved = ['form', 'org', 'print', 'admin', 'api', 'login', 'register'];
-      if (reserved.includes(slugTrimmed)) {
-        setError('Этот короткий адрес зарезервирован');
-        return;
-      }
-    }
-
     setLoading(true);
     const { data, error: dbError } = await supabase
       .from('organizations')
@@ -59,7 +39,7 @@ export function OrgRegisterPage() {
         inn,
         kpp,
         name: name.trim(),
-        slug: slugTrimmed || null,
+        slug: inn,
         contact_email: email.trim() || null,
         pin_code: pin,
       }])
@@ -70,11 +50,7 @@ export function OrgRegisterPage() {
 
     if (dbError) {
       if (dbError.code === '23505') {
-        if (dbError.message?.includes('slug')) {
-          setError('Этот короткий адрес уже занят');
-        } else {
-          setError('Организация с таким ИНН уже зарегистрирована');
-        }
+        setError('Организация с таким ИНН уже зарегистрирована');
       } else {
         setError('Ошибка регистрации. Попробуйте позже.');
       }
@@ -186,22 +162,6 @@ export function OrgRegisterPage() {
                 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                 placeholder:text-gray-400"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Короткий адрес</label>
-            <div className="flex items-center gap-0 rounded-lg border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-500">
-              <span className="pl-3 pr-1 py-2.5 text-sm text-gray-400 select-none bg-gray-50 border-r border-gray-300">{window.location.host}/</span>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase().slice(0, 40))}
-                placeholder="my-school (необязательно)"
-                maxLength={40}
-                className="flex-1 px-2 py-2.5 text-sm focus:outline-none placeholder:text-gray-400"
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">Можно задать позже в настройках</p>
           </div>
 
           <div>

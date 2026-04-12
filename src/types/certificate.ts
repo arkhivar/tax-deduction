@@ -66,7 +66,7 @@ export interface Organization {
   kpp: string;
   name: string;
   full_name: string | null;
-  slug: string | null;
+  slug: string;
   contact_email: string | null;
   contact_phone: string | null;
   pin_code: string;

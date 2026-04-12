@@ -21,9 +21,7 @@ export function OrgDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const publicLink = org?.slug
-    ? `${window.location.origin}/${org.slug}`
-    : `${window.location.origin}/form/${org?.inn}`;
+  const publicLink = `${window.location.origin}/${org?.slug || org?.inn}`;
 
   const fetchCertificates = async () => {
     if (!org) return;
