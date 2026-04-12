@@ -147,7 +147,7 @@ export function FormPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <div
-        className="mx-auto py-8 px-4 overflow-hidden"
+        className="mx-auto py-8 px-4 overflow-x-hidden"
         style={{
           minHeight: scaledHeight > 0 ? `${scaledHeight + 80}px` : undefined,
         }}
