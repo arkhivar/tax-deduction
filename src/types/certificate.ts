@@ -75,6 +75,7 @@ export interface Organization {
   qr_code_url: string | null;
   stamp_url: string | null;
   facsimile_url: string | null;
+  admin_notes: string;
   created_at: string;
   updated_at: string;
 }
