@@ -145,11 +145,11 @@ export function FormPage() {
   const scaledHeight = contentHeight * zoom;
 
   return (
-    <div className="min-h-screen bg-gray-100 overflow-hidden">
+    <div className="min-h-screen bg-gray-100">
       <div
-        className="mx-auto py-8 px-4"
+        className="mx-auto py-8 px-4 overflow-hidden"
         style={{
-          height: scaledHeight > 0 ? `${scaledHeight + 64}px` : undefined,
+          minHeight: scaledHeight > 0 ? `${scaledHeight + 80}px` : undefined,
         }}
       >
         <div
