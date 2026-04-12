@@ -143,13 +143,15 @@ export function FormPage() {
   };
 
   const scaledHeight = contentHeight * zoom;
+  const padding = 64;
 
   return (
     <div className="min-h-screen bg-gray-100">
       <div
-        className="mx-auto py-8 px-4 overflow-x-hidden"
+        className="relative mx-auto px-4"
         style={{
-          minHeight: scaledHeight > 0 ? `${scaledHeight + 80}px` : undefined,
+          height: scaledHeight > 0 ? `${scaledHeight + padding}px` : undefined,
+          paddingTop: `${padding / 2}px`,
         }}
       >
         <div
@@ -158,7 +160,10 @@ export function FormPage() {
             transform: `scale(${zoom})`,
             transformOrigin: 'top center',
             width: '900px',
-            margin: '0 auto',
+            position: 'absolute',
+            left: '50%',
+            top: `${padding / 2}px`,
+            marginLeft: '-450px',
           }}
         >
           {orgData ? (
