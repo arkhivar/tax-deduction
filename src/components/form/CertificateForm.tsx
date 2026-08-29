@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
 import { Building2, User, GraduationCap, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { CertificateFormData } from '../../types/certificate';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
+import { DateInput } from '../ui/DateInput';
 import { Select } from '../ui/Select';
 import { SectionHeader } from '../ui/SectionHeader';
 import { DOC_TYPE_OPTIONS, validateForm, type FormErrors } from './formHelpers';
@@ -84,7 +85,7 @@ export function CertificateForm() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.from('education_certificates').insert([formData]);
+    const { error } = await api.certificates.create(formData);
     setSubmitting(false);
 
     if (error) {
@@ -102,7 +103,9 @@ export function CertificateForm() {
         { type: 'form-resize', height: document.body.scrollHeight },
         '*'
       );
-    } catch {}
+    } catch {
+      // postMessage can fail in cross-origin iframes — ignore
+    }
   };
 
   if (submitted) {
@@ -211,8 +214,7 @@ function OrgSection({ formData, errors, updateField, innLoading, lookupInn }: Or
               onChange={handleInnChange}
               placeholder="0000000000"
               maxLength={10}
-              hasError={!!errors.org_inn}
-            />
+              hasError={!!errors.org_inn} uppercase />
             {innLoading && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
@@ -235,8 +237,7 @@ function OrgSection({ formData, errors, updateField, innLoading, lookupInn }: Or
           value={formData.org_name}
           onChange={(e) => updateField('org_name', toCyrillicText(e.target.value))}
           placeholder="Полное наименование образовательной организации"
-          hasError={!!errors.org_name}
-        />
+          hasError={!!errors.org_name} uppercase />
       </FormField>
       <FormField label="Обучение на очной форме" error={errors.is_full_time}>
         <div className="flex items-center gap-6 mt-1">
@@ -280,23 +281,20 @@ function TaxpayerSection({ formData, errors, updateField }: SectionProps) {
             value={formData.taxpayer_last_name}
             onChange={(e) => updateField('taxpayer_last_name', toCyrillicName(e.target.value))}
             placeholder="Иванов"
-            hasError={!!errors.taxpayer_last_name}
-          />
+            hasError={!!errors.taxpayer_last_name} uppercase />
         </FormField>
         <FormField label="Имя" required error={errors.taxpayer_first_name}>
           <Input
             value={formData.taxpayer_first_name}
             onChange={(e) => updateField('taxpayer_first_name', toCyrillicName(e.target.value))}
             placeholder="Иван"
-            hasError={!!errors.taxpayer_first_name}
-          />
+            hasError={!!errors.taxpayer_first_name} uppercase />
         </FormField>
         <FormField label="Отчество" hint="при наличии">
           <Input
             value={formData.taxpayer_patronymic}
             onChange={(e) => updateField('taxpayer_patronymic', toCyrillicName(e.target.value))}
-            placeholder="Иванович"
-          />
+            placeholder="Иванович" uppercase />
         </FormField>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -309,10 +307,9 @@ function TaxpayerSection({ formData, errors, updateField }: SectionProps) {
           />
         </FormField>
         <FormField label="Дата рождения" required error={errors.taxpayer_birth_date}>
-          <Input
-            type="date"
+          <DateInput
             value={formData.taxpayer_birth_date}
-            onChange={(e) => updateField('taxpayer_birth_date', e.target.value)}
+            onChange={(iso) => updateField('taxpayer_birth_date', iso)}
             hasError={!!errors.taxpayer_birth_date}
           />
         </FormField>
@@ -335,16 +332,14 @@ function TaxpayerSection({ formData, errors, updateField }: SectionProps) {
               value={formData.doc_series_number}
               onChange={(e) => updateField('doc_series_number', e.target.value)}
               placeholder="00 00 000000"
-              hasError={!!errors.doc_series_number}
-            />
+              hasError={!!errors.doc_series_number} uppercase />
           </FormField>
           <FormField label="Дата выдачи" required error={errors.doc_issue_date}>
-            <Input
-              type="date"
-              value={formData.doc_issue_date}
-              onChange={(e) => updateField('doc_issue_date', e.target.value)}
+            <DateInput
+            value={formData.doc_issue_date}
+            onChange={(iso) => updateField('doc_issue_date', iso)}
               hasError={!!errors.doc_issue_date}
-            />
+          />
           </FormField>
         </div>
       </div>
@@ -417,23 +412,20 @@ function StudentSection({ formData, errors, updateField }: SectionProps) {
             value={formData.student_last_name}
             onChange={(e) => updateField('student_last_name', toCyrillicName(e.target.value))}
             placeholder="Иванов"
-            hasError={!!errors.student_last_name}
-          />
+            hasError={!!errors.student_last_name} uppercase />
         </FormField>
         <FormField label="Имя" required error={errors.student_first_name}>
           <Input
             value={formData.student_first_name}
             onChange={(e) => updateField('student_first_name', toCyrillicName(e.target.value))}
             placeholder="Петр"
-            hasError={!!errors.student_first_name}
-          />
+            hasError={!!errors.student_first_name} uppercase />
         </FormField>
         <FormField label="Отчество" hint="при наличии">
           <Input
             value={formData.student_patronymic}
             onChange={(e) => updateField('student_patronymic', toCyrillicName(e.target.value))}
-            placeholder="Иванович"
-          />
+            placeholder="Иванович" uppercase />
         </FormField>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -446,10 +438,9 @@ function StudentSection({ formData, errors, updateField }: SectionProps) {
           />
         </FormField>
         <FormField label="Дата рождения" required error={errors.student_birth_date}>
-          <Input
-            type="date"
+          <DateInput
             value={formData.student_birth_date}
-            onChange={(e) => updateField('student_birth_date', e.target.value)}
+            onChange={(iso) => updateField('student_birth_date', iso)}
             hasError={!!errors.student_birth_date}
           />
         </FormField>
@@ -472,16 +463,14 @@ function StudentSection({ formData, errors, updateField }: SectionProps) {
               value={formData.student_doc_series_number}
               onChange={(e) => updateField('student_doc_series_number', e.target.value)}
               placeholder="00 00 000000"
-              hasError={!!errors.student_doc_series_number}
-            />
+              hasError={!!errors.student_doc_series_number} uppercase />
           </FormField>
           <FormField label="Дата выдачи" required error={errors.student_doc_issue_date}>
-            <Input
-              type="date"
-              value={formData.student_doc_issue_date}
-              onChange={(e) => updateField('student_doc_issue_date', e.target.value)}
+            <DateInput
+            value={formData.student_doc_issue_date}
+            onChange={(iso) => updateField('student_doc_issue_date', iso)}
               hasError={!!errors.student_doc_issue_date}
-            />
+          />
           </FormField>
         </div>
       </div>

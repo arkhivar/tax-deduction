@@ -1,7 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { PrintView } from '../components/print/PrintView';
 
 export function PrintPage() {
+  usePageTitle('Печать справки');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 

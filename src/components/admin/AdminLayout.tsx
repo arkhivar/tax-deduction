@@ -1,4 +1,5 @@
-import { FileText, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileText, ArrowLeft, Home } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -26,7 +27,15 @@ export function AdminLayout({ children, title, onBack }: AdminLayoutProps) {
             </div>
           )}
           <div className="h-5 w-px bg-gray-200" />
-          <h1 className="text-sm font-medium text-gray-700">{title}</h1>
+          <h1 className="text-sm font-medium text-gray-700 flex-1">{title}</h1>
+          <Link
+            to="/"
+            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-1.5 rounded-md transition-colors"
+            title="Вернуться к форме"
+          >
+            <Home className="w-4 h-4" />
+            <span className="hidden sm:inline">Вернуться к форме</span>
+          </Link>
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">{children}</main>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { CertificateList } from '../components/admin/CertificateList';
 import { CertificateEdit } from '../components/admin/CertificateEdit';
 import { OrganizationList } from '../components/admin/OrganizationList';
@@ -10,6 +11,7 @@ type AdminView =
   | { type: 'organizations' };
 
 export function AdminPage() {
+  usePageTitle('Административная панель');
   const [view, setView] = useState<AdminView>({ type: 'certificates' });
   const navigate = useNavigate();
 

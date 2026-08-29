@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   RefreshCw, Search, KeyRound, Copy, Check, Save, FileText, Clock,
-  Pencil, X,
+  Pencil, X, Settings,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { Organization } from '../../types/certificate';
+import { Link } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 
 interface OrgStats {
@@ -39,19 +40,13 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
 
   const fetchOrgs = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('organizations')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data } = await api.organizations.list();
     setOrgs(data || []);
     setLoading(false);
   };
 
   const fetchStats = async () => {
-    const { data } = await supabase
-      .from('education_certificates')
-      .select('org_id, status');
-
+    const { data } = await api.certificates.stats();
     if (!data) return;
 
     const map: Record<string, OrgStats> = {};
@@ -60,15 +55,9 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
 
     for (const row of data) {
       if (!row.org_id) continue;
-      if (!map[row.org_id]) {
-        map[row.org_id] = { org_id: row.org_id, total: 0, pending: 0 };
-      }
-      map[row.org_id].total++;
-      globalTotal++;
-      if (row.status === 'draft') {
-        map[row.org_id].pending++;
-        globalPending++;
-      }
+      map[row.org_id] = { org_id: row.org_id, total: parseInt(row.total), pending: parseInt(row.pending) };
+      globalTotal += parseInt(row.total);
+      globalPending += parseInt(row.pending);
     }
 
     map['__global__'] = { org_id: '__global__', total: globalTotal, pending: globalPending };
@@ -95,11 +84,8 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
 
   const resetPin = async (orgId: string) => {
     setResettingId(orgId);
-    const newPin = String(Math.floor(100000 + Math.random() * 900000));
-    const { error } = await supabase
-      .from('organizations')
-      .update({ pin_code: newPin, updated_at: new Date().toISOString() })
-      .eq('id', orgId);
+    const newPin = String(Math.floor(10000000 + Math.random() * 90000000));
+    const { error } = await api.organizations.update(orgId, { pin_code: newPin });
 
     if (!error) {
       setOrgs((prev) =>
@@ -109,7 +95,8 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
     setResettingId(null);
   };
 
-  const copyPin = (orgId: string, pin: string) => {
+  const copyPin = (orgId: string, pin: string | undefined) => {
+    if (!pin) return;
     navigator.clipboard.writeText(pin);
     setCopiedId(orgId);
     setTimeout(() => setCopiedId(null), 2000);
@@ -123,10 +110,7 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
   const saveNote = async (orgId: string) => {
     setSavingNoteId(orgId);
     const notes = notesDraft[orgId] ?? '';
-    const { error } = await supabase
-      .from('organizations')
-      .update({ admin_notes: notes, updated_at: new Date().toISOString() })
-      .eq('id', orgId);
+    const { error } = await api.organizations.update(orgId, { admin_notes: notes });
 
     if (!error) {
       setOrgs((prev) =>
@@ -174,10 +158,7 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
     }
 
     setSavingSlug(true);
-    const { error } = await supabase
-      .from('organizations')
-      .update({ slug: trimmed, updated_at: new Date().toISOString() })
-      .eq('id', orgId);
+    const { error } = await api.organizations.update(orgId, { slug: trimmed });
 
     setSavingSlug(false);
     if (error) {
@@ -284,6 +265,7 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
                     <th className="text-left px-4 py-3 font-medium text-gray-600">Заметка</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">Дата</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-600">PIN</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -421,10 +403,10 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
                         <td className="px-4 py-3 text-center">
                           <div className="inline-flex items-center gap-1">
                             <code className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-800">
-                              {org.pin_code}
+                              {org.pin_code ?? '-'}
                             </code>
                             <button
-                              onClick={() => copyPin(org.id, org.pin_code)}
+                              onClick={() => org.pin_code && copyPin(org.id, org.pin_code)}
                               className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                               title="Копировать PIN"
                             >
@@ -444,6 +426,15 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
                               <KeyRound className={`w-3.5 h-3.5 ${resettingId === org.id ? 'animate-spin' : ''}`} />
                             </button>
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Link
+                            to={`/admin/org/${org.id}/edit`}
+                            className="inline-flex items-center gap-1 p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                            title="Редактировать организацию"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </Link>
                         </td>
                       </tr>
                     );

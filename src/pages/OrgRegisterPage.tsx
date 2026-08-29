@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FileText, AlertCircle, CheckCircle, Copy } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { api } from '../lib/api';
 import { useOrg } from '../contexts/OrgContext';
 import type { Organization } from '../types/certificate';
 
 export function OrgRegisterPage() {
+  usePageTitle('Регистрация организации');
   const [inn, setInn] = useState('');
   const [kpp, setKpp] = useState('');
   const [name, setName] = useState('');
@@ -29,22 +31,18 @@ export function OrgRegisterPage() {
     if (inn.length !== 10) { setError('ИНН должен содержать 10 цифр'); return; }
     if (kpp.length !== 9) { setError('КПП должен содержать 9 цифр'); return; }
     if (!name.trim()) { setError('Укажите наименование организации'); return; }
-    if (pin.length !== 6) { setError('ПИН-код должен содержать 6 цифр'); return; }
+    if (pin.length !== 8) { setError('ПИН-код должен содержать 8 цифр'); return; }
     if (pin !== pinConfirm) { setError('ПИН-коды не совпадают'); return; }
 
     setLoading(true);
-    const { data, error: dbError } = await supabase
-      .from('organizations')
-      .insert([{
-        inn,
-        kpp,
-        name: name.trim(),
-        slug: inn,
-        contact_email: email.trim() || null,
-        pin_code: pin,
-      }])
-      .select()
-      .maybeSingle();
+    const { data, error: dbError } = await api.organizations.create({
+      inn,
+      kpp,
+      name: name.trim(),
+      slug: inn,
+      contact_email: email.trim() || undefined,
+      pin_code: pin,
+    });
 
     setLoading(false);
 
@@ -58,9 +56,14 @@ export function OrgRegisterPage() {
     }
 
     if (data) {
-      const orgData = data as Organization;
-      login(orgData);
-      setRegisteredOrg(orgData);
+      // After registration, auto-login to get a JWT token
+      const { data: loginData, error: loginErr } = await api.organizations.login(inn, pin);
+      if (loginErr || !loginData) {
+        setError('Организация создана, но не удалось войти. Попробуйте войти вручную.');
+        return;
+      }
+      login(loginData.org as Organization, loginData.token);
+      setRegisteredOrg(loginData.org as Organization);
       setRegistered(true);
     }
   };
@@ -183,9 +186,9 @@ export function OrgRegisterPage() {
               <input
                 type="password"
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="6 цифр"
-                maxLength={6}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="8 цифр"
+                maxLength={8}
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm
                   focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                   placeholder:text-gray-400"
@@ -196,9 +199,9 @@ export function OrgRegisterPage() {
               <input
                 type="password"
                 value={pinConfirm}
-                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="6 цифр"
-                maxLength={6}
+                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="8 цифр"
+                maxLength={8}
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm
                   focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                   placeholder:text-gray-400"

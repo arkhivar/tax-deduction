@@ -1,7 +1,7 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { toCyrillicText, toCyrillicName } from '../../lib/cyrillic';
 
-const CELL_SIZE = 16;
+const CELL_SIZE = 18;
 
 interface CellInputProps {
   value: string;
@@ -11,6 +11,9 @@ interface CellInputProps {
   disabled?: boolean;
   hasError?: boolean;
   cellSize?: number;
+  align?: 'left' | 'right';
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function CellInput({
@@ -21,15 +24,25 @@ export function CellInput({
   disabled = false,
   hasError = false,
   cellSize = CELL_SIZE,
+  align = 'left',
+  onFocus,
+  onBlur,
 }: CellInputProps) {
   const hiddenRef = useRef<HTMLInputElement>(null);
   const [focused, setFocused] = useState(false);
 
-  const cursorIndex = Math.min(value.length, maxLength - 1);
+  const cursorIndex = align === 'right' ? maxLength - 1 : Math.min(value.length, maxLength - 1);
 
   const chars: string[] = [];
-  for (let i = 0; i < maxLength; i++) {
-    chars.push(value[i] || '');
+  if (align === 'right') {
+    const padding = Math.max(0, maxLength - value.length);
+    for (let i = 0; i < maxLength; i++) {
+      chars.push(i < padding ? '' : value[i - padding] || '');
+    }
+  } else {
+    for (let i = 0; i < maxLength; i++) {
+      chars.push(value[i] || '');
+    }
   }
 
   const handleClick = () => {
@@ -60,14 +73,18 @@ export function CellInput({
   };
 
   return (
-    <span className="inline-flex cursor-text" onClick={handleClick}>
+    <span
+      className="inline-flex cursor-text"
+      style={{ height: `${cellSize}px`, lineHeight: `${cellSize}px`, verticalAlign: 'middle' }}
+      onClick={handleClick}
+    >
       <input
         ref={hiddenRef}
         value={value}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onFocus={() => { setFocused(true); onFocus?.(); }}
+        onBlur={() => { setFocused(false); onBlur?.(); }}
         disabled={disabled}
         className="sr-only"
         tabIndex={disabled ? -1 : 0}
@@ -92,6 +109,7 @@ export function CellInput({
               fontSize: `${cellSize - 4}px`,
               lineHeight: `${cellSize}px`,
               marginLeft: i > 0 ? '-1px' : '0',
+              verticalAlign: 'top',
             }}
           >
             {ch}
@@ -118,7 +136,7 @@ interface LabeledCellInputProps extends CellInputProps {
 
 export function LabeledCellInput({ label, className = '', ...rest }: LabeledCellInputProps) {
   return (
-    <span className={`inline-flex items-baseline gap-1 ${className}`}>
+    <span className={`inline-flex items-center gap-1 ${className}`}>
       <span className="text-[10px] whitespace-nowrap">{label}</span>
       <CellInput {...rest} />
     </span>
@@ -153,7 +171,7 @@ export function DateCellInput({
   };
 
   return (
-    <span className="inline-flex items-baseline gap-0">
+    <span className="inline-flex items-center gap-0">
       <CellInput value={parts.day} maxLength={2} onChange={handleDayChange} filter="digits" disabled={disabled} hasError={hasError} cellSize={cellSize} />
       <span className="mx-0.5 text-[10px]">.</span>
       <CellInput value={parts.month} maxLength={2} onChange={handleMonthChange} filter="digits" disabled={disabled} hasError={hasError} cellSize={cellSize} />
@@ -178,22 +196,69 @@ export function AmountCellInput({
   hasError = false,
   cellSize = CELL_SIZE,
 }: AmountCellInputProps) {
-  const parts = formatAmountParts(value);
+  const controlledParts = formatAmountParts(value);
+  const [rawInt, setRawInt] = useState(controlledParts.integer);
+  const [rawDec, setRawDec] = useState(controlledParts.decimal);
+  const [focused, setFocused] = useState(false);
+
+  // Sync local raw strings when the controlled value changes and the field is not being edited.
+  useEffect(() => {
+    if (!focused) {
+      setRawInt(controlledParts.integer);
+      setRawDec(controlledParts.decimal);
+    }
+  }, [controlledParts.integer, controlledParts.decimal, focused]);
+
+  const commit = (int: string, dec: string) => {
+    const cleanInt = int.replace(/^0+/, '') || '0';
+    const cleanDec = (dec + '00').slice(0, 2);
+    const cents = parseInt(`${cleanInt}${cleanDec}`, 10);
+    onChange(isNaN(cents) ? 0 : cents / 100);
+  };
 
   const handleIntChange = (v: string) => {
-    const num = parseFloat(`${v || '0'}.${parts.decimal}`);
-    onChange(isNaN(num) ? 0 : num);
+    setRawInt(v);
+    commit(v, rawDec);
   };
   const handleDecChange = (v: string) => {
-    const num = parseFloat(`${parts.integer || '0'}.${v || '0'}`);
-    onChange(isNaN(num) ? 0 : num);
+    setRawDec(v);
+    commit(rawInt, v);
+  };
+
+  const handleFocus = () => setFocused(true);
+  const handleBlur = () => {
+    setFocused(false);
+    // Re-sync with controlled value so empty partials become formatted zeros if needed.
+    setRawInt(controlledParts.integer);
+    setRawDec(controlledParts.decimal);
   };
 
   return (
-    <span className="inline-flex items-baseline gap-0">
-      <CellInput value={parts.integer} maxLength={12} onChange={handleIntChange} filter="digits" disabled={disabled} hasError={hasError} cellSize={cellSize} />
-      <span className="mx-0.5 text-[10px] font-bold">.</span>
-      <CellInput value={parts.decimal} maxLength={2} onChange={handleDecChange} filter="digits" disabled={disabled} hasError={hasError} cellSize={cellSize} />
+    <span className="inline-flex items-center gap-0">
+      <CellInput
+        value={focused ? rawInt : controlledParts.integer}
+        maxLength={12}
+        onChange={handleIntChange}
+        filter="digits"
+        disabled={disabled}
+        hasError={hasError}
+        cellSize={cellSize}
+        align="right"
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
+      <span className="mx-0.5 text-[10px]">.</span>
+      <CellInput
+        value={focused ? rawDec : controlledParts.decimal}
+        maxLength={2}
+        onChange={handleDecChange}
+        filter="digits"
+        disabled={disabled}
+        hasError={hasError}
+        cellSize={cellSize}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
     </span>
   );
 }

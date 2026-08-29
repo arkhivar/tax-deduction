@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Printer, ArrowLeft } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { Link } from 'react-router-dom';
+import { Printer, ArrowLeft, Home } from 'lucide-react';
+import { api } from '../../lib/api';
 import type { Certificate } from '../../types/certificate';
 import { PrintPage } from './PrintPage';
 import { PrintPage2 } from './PrintPage2';
@@ -16,11 +17,7 @@ export function PrintView({ certificateId, onBack }: PrintViewProps) {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from('education_certificates')
-        .select('*')
-        .eq('id', certificateId)
-        .maybeSingle();
+      const { data } = await api.certificates.get(certificateId);
       setCert(data);
       setLoading(false);
     };
@@ -50,14 +47,24 @@ export function PrintView({ certificateId, onBack }: PrintViewProps) {
             <ArrowLeft className="w-4 h-4" />
             Назад
           </button>
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700
-              text-white text-sm font-medium transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            Печать
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md transition-colors"
+              title="Вернуться к форме"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Вернуться к форме</span>
+            </Link>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700
+                text-white text-sm font-medium transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              Печать
+            </button>
+          </div>
         </div>
       </div>
 

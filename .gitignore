@@ -21,3 +21,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Server secrets and user-uploaded org assets
+server/.env
+server/uploads/

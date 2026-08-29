@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { RefreshCw, Eye, Printer, Search, Filter, Building2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { Certificate } from '../../types/certificate';
 import { AdminLayout } from './AdminLayout';
 
@@ -24,16 +24,7 @@ export function CertificateList({ onView, onPrint, onShowOrgs }: CertificateList
 
   const fetchCertificates = async () => {
     setLoading(true);
-    let query = supabase
-      .from('education_certificates')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (statusFilter !== 'all') {
-      query = query.eq('status', statusFilter);
-    }
-
-    const { data } = await query;
+    const { data } = await api.certificates.list({ status: statusFilter });
     setCertificates(data || []);
     setLoading(false);
   };

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { FileText, LayoutDashboard, Settings, LogOut, Home } from 'lucide-react';
 import { useOrg } from '../../contexts/OrgContext';
 
 interface OrgLayoutProps {
@@ -47,6 +47,14 @@ export function OrgLayout({ children }: OrgLayoutProps) {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-1.5 rounded-md transition-colors"
+              title="Вернуться к форме"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Вернуться к форме</span>
+            </Link>
             <span className="text-xs text-gray-500 hidden sm:block max-w-[200px] truncate">
               {org?.name}
             </span>

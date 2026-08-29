@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { RefreshCw, Eye, Printer, Search, Filter, Copy, CheckCircle, Link2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { useOrg } from '../contexts/OrgContext';
 import { OrgLayout } from '../components/org/OrgLayout';
@@ -13,6 +14,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export function OrgDashboardPage() {
+  usePageTitle('Личный кабинет');
   const { org } = useOrg();
   const navigate = useNavigate();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -26,17 +28,10 @@ export function OrgDashboardPage() {
   const fetchCertificates = async () => {
     if (!org) return;
     setLoading(true);
-    let query = supabase
-      .from('education_certificates')
-      .select('*')
-      .eq('org_id', org.id)
-      .order('created_at', { ascending: false });
-
-    if (statusFilter !== 'all') {
-      query = query.eq('status', statusFilter);
-    }
-
-    const { data } = await query;
+    const { data } = await api.certificates.list({
+      orgId: org.id,
+      status: statusFilter,
+    });
     setCertificates(data || []);
     setLoading(false);
   };

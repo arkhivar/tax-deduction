@@ -29,7 +29,7 @@ export function hasCyrillicLetters(input: string): boolean {
   return CYRILLIC_LETTER.test(input);
 }
 
-const ALLOWED_CYRILLIC_NAME = /^[\u0400-\u04FF\s\-]*$/;
+const ALLOWED_CYRILLIC_NAME = /^[\u0400-\u04FF\s-]*$/;
 
 export function isCyrillicName(input: string): boolean {
   if (!input.trim()) return true;
@@ -41,5 +41,5 @@ export function toCyrillicText(input: string): string {
 }
 
 export function toCyrillicName(input: string): string {
-  return latinToCyrillic(input).replace(/[^\u0400-\u04FF\s\-]/g, '');
+  return latinToCyrillic(input).replace(/[^\u0400-\u04FF\s-]/g, '');
 }

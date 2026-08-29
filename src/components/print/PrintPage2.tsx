@@ -1,6 +1,7 @@
 import type { Certificate } from '../../types/certificate';
 import { CellRow, LabeledCells, DateCells } from './CellRow';
 import { padChars, formatDateToCells } from './printHelpers';
+import { CornerSquares } from '../form/CornerSquares';
 
 interface PrintPage2Props {
   cert: Certificate;
@@ -9,9 +10,9 @@ interface PrintPage2Props {
 export function PrintPage2({ cert }: PrintPage2Props) {
   const orgInnChars = padChars(cert.org_inn, 12);
   const orgKppChars = padChars(cert.org_kpp, 9);
-  const lastNameChars = padChars(cert.student_last_name, 36);
-  const firstNameChars = padChars(cert.student_first_name, 36);
-  const patronymicChars = padChars(cert.student_patronymic, 36);
+  const lastNameChars = padChars(cert.student_last_name, 30);
+  const firstNameChars = padChars(cert.student_first_name, 30);
+  const patronymicChars = padChars(cert.student_patronymic, 30);
   const innChars = padChars(cert.student_inn, 12);
   const birthDate = formatDateToCells(cert.student_birth_date || '');
   const docCodeChars = padChars(cert.student_doc_type_code, 2);
@@ -21,7 +22,7 @@ export function PrintPage2({ cert }: PrintPage2Props) {
 
   return (
     <div
-      className="bg-white text-black font-serif print:shadow-none shadow-lg"
+      className="bg-white text-black font-serif print:shadow-none shadow-lg relative"
       style={{
         width: '210mm',
         minHeight: '297mm',
@@ -33,9 +34,10 @@ export function PrintPage2({ cert }: PrintPage2Props) {
         flexDirection: 'column',
       }}
     >
+      <CornerSquares />
       <div className="flex items-start justify-between mb-2">
-        <div className="border-2 border-black p-1 text-center font-mono text-[9px] leading-tight">
-          <div className="border border-black px-2 py-0.5 mb-0.5">||||||||||||||||</div>
+        <div className="text-center font-mono text-[9px] leading-tight">
+          <img src="/barcode-page2.svg" alt="" className="block mx-auto h-8 mb-0.5" />
           <div className="flex gap-4 justify-center">
             <span>2710</span>
             <span>1025</span>
@@ -58,34 +60,72 @@ export function PrintPage2({ cert }: PrintPage2Props) {
         Данные физического лица, которому оказаны образовательные услуги<sup>1</sup>:
       </p>
 
-      <div className="space-y-1 mb-2">
-        <LabeledCells label="Фамилия" chars={lastNameChars} className="block" />
-        <LabeledCells label="Имя" chars={firstNameChars} className="block" />
-        <div className="flex items-baseline gap-0.5">
-          <span className="text-[10px]">Отчество<sup>1</sup></span>
+      <div
+        className="grid mb-2"
+        style={{
+          gridTemplateColumns: '110px 1fr',
+          columnGap: '6px',
+          rowGap: '4px',
+          alignItems: 'baseline',
+        }}
+      >
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Фамилия</span>
+        <span className="w-full"><CellRow chars={lastNameChars} /></span>
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Имя</span>
+        <span className="w-full"><CellRow chars={firstNameChars} /></span>
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Отчество<sup>1</sup></span>
+        <span className="inline-flex items-baseline">
           <CellRow chars={patronymicChars} />
-        </div>
+        </span>
       </div>
 
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2">
-        <div className="flex items-baseline gap-0.5">
-          <span className="text-[10px]">ИНН<sup>2</sup></span>
+      <div
+        className="grid mb-2"
+        style={{
+          gridTemplateColumns: '110px 1fr',
+          columnGap: '6px',
+          rowGap: '4px',
+          alignItems: 'baseline',
+        }}
+      >
+        <span className="text-[10px] whitespace-nowrap text-right self-center">ИНН<sup>2</sup></span>
+        <span className="inline-flex items-baseline">
           <CellRow chars={innChars} />
-        </div>
-        <span className="inline-flex items-baseline gap-1">
-          <span className="text-[10px]">Дата рождения</span>
+        </span>
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Дата рождения</span>
+        <span className="inline-flex items-baseline">
           <DateCells {...birthDate} />
         </span>
       </div>
 
       <p className="text-[10px] mb-1">Сведения о документе, удостоверяющем личность:</p>
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-1">
-        <LabeledCells label="Код вида документа" chars={docCodeChars} />
-        <LabeledCells label="Серия и номер" chars={docSeriesChars} />
+      <div
+        className="grid mb-1"
+        style={{
+          gridTemplateColumns: '110px 1fr',
+          columnGap: '6px',
+          rowGap: '4px',
+          alignItems: 'baseline',
+        }}
+      >
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Код вида документа</span>
+        <span className="inline-flex items-baseline">
+          <CellRow chars={docCodeChars} />
+        </span>
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Серия и номер</span>
+        <span className="w-full"><CellRow chars={docSeriesChars} /></span>
       </div>
-      <div className="mb-3">
-        <span className="inline-flex items-baseline gap-1">
-          <span className="text-[10px]">Дата выдачи</span>
+      <div
+        className="grid mb-3"
+        style={{
+          gridTemplateColumns: '110px 1fr',
+          columnGap: '6px',
+          rowGap: '4px',
+          alignItems: 'baseline',
+        }}
+      >
+        <span className="text-[10px] whitespace-nowrap text-right self-center">Дата выдачи</span>
+        <span className="inline-flex items-baseline">
           <DateCells {...issueDate} />
         </span>
       </div>

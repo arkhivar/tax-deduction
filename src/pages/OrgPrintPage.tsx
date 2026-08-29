@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Printer, ArrowLeft, QrCode, Stamp, PenLine } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { Printer, ArrowLeft, QrCode, Stamp, PenLine, Home } from 'lucide-react';
+import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { PrintPage } from '../components/print/PrintPage';
 import { PrintPage2 } from '../components/print/PrintPage2';
 import { useOrg } from '../contexts/OrgContext';
 
 export function OrgPrintPage() {
+  usePageTitle('Печать справки');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { org } = useOrg();
@@ -20,11 +22,7 @@ export function OrgPrintPage() {
   useEffect(() => {
     if (!id) return;
     const load = async () => {
-      const { data } = await supabase
-        .from('education_certificates')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      const { data } = await api.certificates.get(id);
       setCert(data);
       setLoading(false);
     };
@@ -35,7 +33,6 @@ export function OrgPrintPage() {
   if (!cert) return <div className="p-12 text-center text-gray-500 text-sm">Справка не найдена</div>;
 
   const overlays: OverlayConfig = {
-    qrUrl: showQr ? org?.qr_code_url : null,
     stampUrl: showStamp ? org?.stamp_url : null,
     facsimileUrl: showFacsimile ? org?.facsimile_url : null,
   };
@@ -61,6 +58,14 @@ export function OrgPrintPage() {
             {org?.facsimile_url && (
               <ToggleButton icon={PenLine} label="Подпись" active={showFacsimile} onClick={() => setShowFacsimile(!showFacsimile)} />
             )}
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md transition-colors"
+              title="Вернуться к форме"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">Вернуться к форме</span>
+            </Link>
             <button
               onClick={() => window.print()}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-800
@@ -73,32 +78,27 @@ export function OrgPrintPage() {
         </div>
       </div>
       <div className="print:m-0 print:p-0 max-w-[900px] mx-auto p-4 space-y-8 print:space-y-0">
-        <PrintPageWithOverlays cert={cert} overlays={overlays} />
-        <div className="print:break-before-page" />
-        <PrintPage2 cert={cert} />
+        <PrintPageWithOverlays cert={cert} qrUrl={showQr ? org?.qr_code_url : null} overlays={overlays} />
+        {cert.is_same_person === 0 && (
+          <>
+            <div className="print:break-before-page" />
+            <PrintPage2 cert={cert} />
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 interface OverlayConfig {
-  qrUrl: string | null | undefined;
   stampUrl: string | null | undefined;
   facsimileUrl: string | null | undefined;
 }
 
-function PrintPageWithOverlays({ cert, overlays }: { cert: Certificate; overlays: OverlayConfig }) {
+function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; qrUrl: string | null | undefined; overlays: OverlayConfig }) {
   return (
     <div className="relative">
-      <PrintPage cert={cert} />
-      {overlays.qrUrl && (
-        <img
-          src={overlays.qrUrl}
-          alt="QR"
-          className="absolute"
-          style={{ right: '15mm', top: '210mm', width: '24mm', height: '24mm', objectFit: 'contain' }}
-        />
-      )}
+      <PrintPage cert={cert} qrUrl={qrUrl} />
       {overlays.stampUrl && (
         <img
           src={overlays.stampUrl}

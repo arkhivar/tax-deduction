@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { CertificateFormData } from '../../types/certificate';
 import { validateForm, type FormErrors } from './formHelpers';
 import { CellInput, LabeledCellInput, DateCellInput, AmountCellInput } from './CellInput';
-import { CellRow, LabeledCells } from '../print/CellRow';
+import { CellRow } from '../print/CellRow';
 import { padChars } from '../print/printHelpers';
 import { DocTypeSelect } from './DocTypeSelect';
+import { CornerSquares } from './CornerSquares';
 import { useInnLookup } from '../../hooks/useInnLookup';
 
 interface PdfFormProps {
@@ -16,7 +18,10 @@ interface PdfFormProps {
   orgKpp?: string;
   orgName?: string;
   orgLocked?: boolean;
+  orgIdentifier?: string;
+  orgQrUrl?: string;
   onNewForm?: () => void;
+  onPrint?: (formData: CertificateFormData) => void;
 }
 
 const currentYear = new Date().getFullYear();
@@ -48,7 +53,7 @@ const initialFormData: CertificateFormData = {
   student_doc_issue_date: '',
 };
 
-export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = false, onNewForm }: PdfFormProps) {
+export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = false, orgIdentifier, orgQrUrl, onNewForm, onPrint }: PdfFormProps) {
   const [formData, setFormData] = useState<CertificateFormData>({
     ...initialFormData,
     org_inn: orgInn || '',
@@ -111,35 +116,21 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
     let resolvedOrgId = orgId;
 
     if (!resolvedOrgId && formData.org_inn.length === 10) {
-      const { data: existingOrg } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('inn', formData.org_inn)
-        .maybeSingle();
+      const { data: existingOrg } = await api.organizations.lookup(formData.org_inn);
 
       if (existingOrg) {
         resolvedOrgId = existingOrg.id;
       } else {
-        const randomPin = String(Math.floor(100000 + Math.random() * 900000));
-        const { data: newOrg, error: orgError } = await supabase
-          .from('organizations')
-          .insert([{
-            inn: formData.org_inn,
-            kpp: formData.org_kpp,
-            name: formData.org_name,
-            pin_code: randomPin,
-          }])
-          .select('id')
-          .maybeSingle();
+        const { data: newOrg, error: orgError } = await api.organizations.findOrCreate(
+          formData.org_inn,
+          formData.org_kpp,
+          formData.org_name
+        );
 
-        if (orgError) {
-          const { data: retryOrg } = await supabase
-            .from('organizations')
-            .select('id')
-            .eq('inn', formData.org_inn)
-            .maybeSingle();
+        if (orgError || !newOrg) {
+          const { data: retryOrg } = await api.organizations.lookup(formData.org_inn);
           if (retryOrg) resolvedOrgId = retryOrg.id;
-        } else if (newOrg) {
+        } else {
           resolvedOrgId = newOrg.id;
         }
       }
@@ -150,7 +141,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
     for (const key of ['taxpayer_birth_date', 'doc_issue_date', 'student_birth_date', 'student_doc_issue_date', 'sign_date'] as const) {
       if (insertData[key] === '') insertData[key] = null;
     }
-    const { error } = await supabase.from('education_certificates').insert([insertData]);
+    const { error } = await api.certificates.create(insertData);
     setSubmitting(false);
 
     if (error) {
@@ -210,7 +201,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
       )}
 
       <div
-        className="bg-white text-black font-serif shadow-lg mx-auto"
+        className="bg-white text-black font-serif shadow-lg mx-auto relative"
         style={{
           width: '210mm',
           minHeight: '297mm',
@@ -220,9 +211,10 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           boxSizing: 'border-box',
         }}
       >
+        <CornerSquares />
         <div className="flex items-start justify-between mb-2">
-          <div className="border-2 border-black p-1 text-center font-mono text-[9px] leading-tight">
-            <div className="border border-black px-2 py-0.5 mb-0.5">||||||||||||||||</div>
+          <div className="text-center font-mono text-[9px] leading-tight">
+            <img src="/barcode.svg" alt="" className="block mx-auto h-8 mb-0.5" />
             <div className="flex gap-4 justify-center">
               <span>2710</span>
               <span>1018</span>
@@ -356,48 +348,66 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           (далее - налогоплательщик)
         </p>
 
-        <div className="space-y-1 mb-2">
+        <div
+          className="grid mb-2"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Фамилия</span>
           <LabeledCellInput
-            label="Фамилия"
+            label=""
             value={formData.taxpayer_last_name}
-            maxLength={36}
+            maxLength={30}
             onChange={(v) => updateField('taxpayer_last_name', v)}
             filter="cyrillic_name"
             hasError={!!errors.taxpayer_last_name}
-            className="block"
+            className="w-full justify-start"
           />
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Имя</span>
           <LabeledCellInput
-            label="Имя"
+            label=""
             value={formData.taxpayer_first_name}
-            maxLength={36}
+            maxLength={30}
             onChange={(v) => updateField('taxpayer_first_name', v)}
             filter="cyrillic_name"
             hasError={!!errors.taxpayer_first_name}
-            className="block"
+            className="w-full justify-start"
           />
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-[10px]">Отчество<sup>1</sup></span>
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Отчество<sup>1</sup></span>
+          <span className="inline-flex items-baseline">
             <CellInput
               value={formData.taxpayer_patronymic}
-              maxLength={36}
+              maxLength={30}
               onChange={(v) => updateField('taxpayer_patronymic', v)}
               filter="cyrillic_name"
             />
-          </div>
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2">
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-[10px]">ИНН<sup>2</sup></span>
+        <div
+          className="grid mb-2"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">ИНН<sup>2</sup></span>
+          <span className="inline-flex items-baseline">
             <CellInput
               value={formData.taxpayer_inn}
               maxLength={12}
               onChange={(v) => updateField('taxpayer_inn', v)}
               filter="digits"
             />
-          </div>
+          </span>
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Дата рождения</span>
           <span className="inline-flex items-baseline gap-1">
-            <span className="text-[10px]">Дата рождения</span>
             <DateCellInput
               value={formData.taxpayer_birth_date}
               onChange={(v) => updateField('taxpayer_birth_date', v)}
@@ -407,9 +417,17 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
         </div>
 
         <p className="text-[10px] mb-1">Сведения о документе, удостоверяющем личность:</p>
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-1">
-          <div className="flex items-baseline gap-1">
-            <span className="text-[10px]">Код вида документа</span>
+        <div
+          className="grid mb-1"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Код вида документа</span>
+          <span className="inline-flex items-baseline gap-1">
             <DocTypeSelect
               value={formData.doc_type_code}
               onChange={(v) => updateField('doc_type_code', v)}
@@ -422,18 +440,28 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
               filter="digits"
               hasError={!!errors.doc_type_code}
             />
-          </div>
+          </span>
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Серия и номер</span>
           <LabeledCellInput
-            label="Серия и номер"
+            label=""
             value={formData.doc_series_number}
             maxLength={20}
             onChange={(v) => updateField('doc_series_number', v)}
             hasError={!!errors.doc_series_number}
+            className="w-full justify-start"
           />
         </div>
-        <div className="mb-3">
+        <div
+          className="grid mb-3"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Дата выдачи</span>
           <span className="inline-flex items-baseline gap-1">
-            <span className="text-[10px]">Дата выдачи</span>
             <DateCellInput
               value={formData.doc_issue_date}
               onChange={(v) => updateField('doc_issue_date', v)}
@@ -453,7 +481,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           <span className="text-[9px] text-gray-600 ml-2">0 - нет / 1 - да</span>
         </div>
 
-        <div className="flex items-baseline gap-1 mb-6">
+        <div className="flex items-center gap-1 mb-6">
           <span className="text-[10px]">Сумма расходов на оказанные образовательные услуги</span>
           <AmountCellInput
             value={formData.expense_amount}
@@ -477,7 +505,11 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
             <p className="text-[8px] text-gray-500 text-center mt-0.5">(фамилия, имя, отчество)</p>
           </div>
           <div className="border border-gray-400 w-24 h-24 flex items-center justify-center text-[9px] text-gray-400">
-            Зона QR-кода
+            {orgQrUrl ? (
+              <img src={orgQrUrl} alt="QR" className="w-full h-full object-contain" />
+            ) : (
+              'Зона QR-кода'
+            )}
           </div>
         </div>
 
@@ -495,7 +527,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
 
         <div className="flex items-baseline gap-1 mb-6 opacity-40" title="Заполняется организацией">
           <span className="text-[10px]">Справка составлена на</span>
-          <CellRow chars={padChars('2', 3)} />
+          <CellRow chars={padChars((formData.is_same_person === 0 ? '2' : '1').padStart(3, ' '), 3)} />
           <span className="text-[10px]">страницах</span>
         </div>
 
@@ -506,7 +538,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
       </div>
 
       <div
-        className="bg-white text-black font-serif shadow-lg mx-auto mt-8"
+        className="bg-white text-black font-serif shadow-lg mx-auto mt-8 relative"
         style={{
           width: '210mm',
           minHeight: '297mm',
@@ -518,9 +550,10 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           flexDirection: 'column',
         }}
       >
+        <CornerSquares />
         <div className="flex items-start justify-between mb-2">
-          <div className="border-2 border-black p-1 text-center font-mono text-[9px] leading-tight">
-            <div className="border border-black px-2 py-0.5 mb-0.5">||||||||||||||||</div>
+          <div className="text-center font-mono text-[9px] leading-tight">
+            <img src="/barcode-page2.svg" alt="" className="block mx-auto h-8 mb-0.5" />
             <div className="flex gap-4 justify-center">
               <span>2710</span>
               <span>1025</span>
@@ -545,48 +578,66 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           Данные физического лица, которому оказаны образовательные услуги<sup>1</sup>:
         </p>
 
-        <div className="space-y-1 mb-2">
+        <div
+          className="grid mb-2"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Фамилия</span>
           <LabeledCellInput
-            label="Фамилия"
+            label=""
             value={formData.student_last_name}
-            maxLength={36}
+            maxLength={30}
             onChange={(v) => updateField('student_last_name', v)}
             filter="cyrillic_name"
             hasError={!!errors.student_last_name}
-            className="block"
+            className="w-full justify-start"
           />
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Имя</span>
           <LabeledCellInput
-            label="Имя"
+            label=""
             value={formData.student_first_name}
-            maxLength={36}
+            maxLength={30}
             onChange={(v) => updateField('student_first_name', v)}
             filter="cyrillic_name"
             hasError={!!errors.student_first_name}
-            className="block"
+            className="w-full justify-start"
           />
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-[10px]">Отчество<sup>1</sup></span>
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Отчество<sup>1</sup></span>
+          <span className="inline-flex items-baseline">
             <CellInput
               value={formData.student_patronymic}
-              maxLength={36}
+              maxLength={30}
               onChange={(v) => updateField('student_patronymic', v)}
               filter="cyrillic_name"
             />
-          </div>
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-2">
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-[10px]">ИНН<sup>2</sup></span>
+        <div
+          className="grid mb-2"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">ИНН<sup>2</sup></span>
+          <span className="inline-flex items-baseline">
             <CellInput
               value={formData.student_inn}
               maxLength={12}
               onChange={(v) => updateField('student_inn', v)}
               filter="digits"
             />
-          </div>
+          </span>
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Дата рождения</span>
           <span className="inline-flex items-baseline gap-1">
-            <span className="text-[10px]">Дата рождения</span>
             <DateCellInput
               value={formData.student_birth_date}
               onChange={(v) => updateField('student_birth_date', v)}
@@ -596,9 +647,17 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
         </div>
 
         <p className="text-[10px] mb-1">Сведения о документе, удостоверяющем личность:</p>
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-1">
-          <div className="flex items-baseline gap-1">
-            <span className="text-[10px]">Код вида документа</span>
+        <div
+          className="grid mb-1"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Код вида документа</span>
+          <span className="inline-flex items-baseline gap-1">
             <DocTypeSelect
               value={formData.student_doc_type_code}
               onChange={(v) => updateField('student_doc_type_code', v)}
@@ -611,18 +670,28 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
               filter="digits"
               hasError={!!errors.student_doc_type_code}
             />
-          </div>
+          </span>
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Серия и номер</span>
           <LabeledCellInput
-            label="Серия и номер"
+            label=""
             value={formData.student_doc_series_number}
             maxLength={20}
             onChange={(v) => updateField('student_doc_series_number', v)}
             hasError={!!errors.student_doc_series_number}
+            className="w-full justify-start"
           />
         </div>
-        <div className="mb-3">
+        <div
+          className="grid mb-3"
+          style={{
+            gridTemplateColumns: '110px 1fr',
+            columnGap: '6px',
+            rowGap: '4px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span className="text-[10px] whitespace-nowrap text-right self-center">Дата выдачи</span>
           <span className="inline-flex items-baseline gap-1">
-            <span className="text-[10px]">Дата выдачи</span>
             <DateCellInput
               value={formData.student_doc_issue_date}
               onChange={(v) => updateField('student_doc_issue_date', v)}
@@ -656,27 +725,50 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
             <span className="text-[8px] text-gray-500">(дата)</span>
           </div>
         </div>
+      </div>
 
-        <div className="mt-6 pt-4 border-t border-gray-200">
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="
+            flex-1 py-2.5 px-4 rounded-lg border border-gray-300 font-sans text-[13px] font-medium
+            bg-white hover:bg-gray-50 active:bg-gray-100
+            disabled:opacity-50 disabled:cursor-not-allowed
+            transition-colors duration-150
+          "
+        >
+          {submitting ? 'Отправка...' : 'Отправить данные'}
+        </button>
+        {onPrint && (
           <button
-            type="submit"
-            disabled={submitting}
+            type="button"
+            onClick={() => onPrint(formData)}
             className="
-              w-full py-2.5 px-6 rounded border border-black font-serif text-[12px]
+              flex-1 py-2.5 px-4 rounded-lg border border-gray-300 font-sans text-[13px] font-medium
               bg-white hover:bg-gray-50 active:bg-gray-100
-              disabled:opacity-50 disabled:cursor-not-allowed
               transition-colors duration-150
             "
           >
-            {submitting ? 'Отправка...' : 'Отправить данные для формирования справки'}
+            Распечатать
           </button>
-          {Object.keys(errors).length > 0 && (
-            <p className="text-[9px] text-red-600 text-center mt-2">
-              Пожалуйста, заполните все обязательные поля (выделены красным)
-            </p>
-          )}
-        </div>
+        )}
+        <Link
+          to={orgIdentifier ? `/org/login?slug=${orgIdentifier}` : '/org/login'}
+          className="
+            flex-1 py-2.5 px-4 rounded-lg border border-gray-300 font-sans text-[13px] font-medium
+            text-gray-700 bg-white hover:bg-gray-50 active:bg-gray-100 text-center
+            transition-colors duration-150
+          "
+        >
+          Вход для организации
+        </Link>
       </div>
+      {Object.keys(errors).length > 0 && (
+        <p className="text-xs text-red-600 text-center mt-2">
+          Пожалуйста, заполните все обязательные поля (выделены красным)
+        </p>
+      )}
     </form>
   );
 }

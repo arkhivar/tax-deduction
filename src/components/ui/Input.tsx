@@ -2,10 +2,18 @@ import React from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   hasError?: boolean;
+  uppercase?: boolean;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ hasError, className = '', ...props }, ref) => {
+  ({ hasError, uppercase, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (uppercase && e.target.value) {
+        e.target.value = e.target.value.toUpperCase();
+      }
+      onChange?.(e);
+    };
+
     return (
       <input
         ref={ref}
@@ -18,8 +26,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ? 'border-red-300 focus:ring-red-500/30 focus:border-red-500'
             : 'border-gray-300 focus:ring-blue-500/30 focus:border-blue-500 hover:border-gray-400'
           }
-          ${className}
+          ${uppercase ? 'uppercase' : ''}
+          ${props.className || ''}
         `}
+        onChange={handleChange}
         {...props}
       />
     );

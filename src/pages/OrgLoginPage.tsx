@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { FileText, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useOrg } from '../contexts/OrgContext';
 
 export function OrgLoginPage() {
+  usePageTitle('Вход для организации');
   const [searchParams] = useSearchParams();
   const slugParam = searchParams.get('slug');
 
@@ -19,10 +21,7 @@ export function OrgLoginPage() {
   useEffect(() => {
     if (!slugParam) return;
     const resolve = async () => {
-      const isInn = /^\d{10}$/.test(slugParam);
-      const { data } = isInn
-        ? await supabase.from('organizations').select('inn').eq('inn', slugParam).maybeSingle()
-        : await supabase.from('organizations').select('inn').eq('slug', slugParam).maybeSingle();
+      const { data } = await api.organizations.resolveInn(slugParam);
       if (data) setInn(data.inn);
       setResolving(false);
     };
@@ -37,31 +36,21 @@ export function OrgLoginPage() {
       setError('ИНН должен содержать 10 цифр');
       return;
     }
-    if (pin.length !== 6) {
-      setError('ПИН-код должен содержать 6 цифр');
+    if (pin.length < 6 || pin.length > 8) {
+      setError('ПИН-код должен содержать 6–8 цифр');
       return;
     }
 
     setLoading(true);
-    const { data, error: dbError } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('inn', inn)
-      .maybeSingle();
-
+    const { data, error: loginError } = await api.organizations.login(inn, pin);
     setLoading(false);
 
-    if (dbError || !data) {
-      setError('Организация с таким ИНН не найдена');
+    if (loginError || !data) {
+      setError(loginError?.message || 'Ошибка входа');
       return;
     }
 
-    if (data.pin_code !== pin) {
-      setError('Неверный ПИН-код');
-      return;
-    }
-
-    login(data);
+    login(data.org, data.token);
     navigate('/org/dashboard');
   };
 
@@ -111,9 +100,9 @@ export function OrgLoginPage() {
             <input
               type="password"
               value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="6 цифр"
-              maxLength={6}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              placeholder="6–8 цифр"
+              maxLength={8}
               className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm
                 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                 placeholder:text-gray-400"

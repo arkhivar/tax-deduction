@@ -1,7 +1,5 @@
 import { useRef, useCallback } from 'react';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { api } from '../lib/api';
 
 interface InnLookupResult {
   found: boolean;
@@ -31,23 +29,8 @@ export function useInnLookup(
     onLoadingRef.current(true);
 
     try {
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/inn-lookup`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ inn }),
-          signal: controller.signal,
-        }
-      );
-
-      if (!res.ok) throw new Error('Lookup failed');
-
-      const data: InnLookupResult = await res.json();
-      if (!controller.signal.aborted) {
+      const { data } = await api.innLookup(inn);
+      if (!controller.signal.aborted && data) {
         onResultRef.current(data);
       }
     } catch (err: unknown) {

@@ -69,7 +69,7 @@ export interface Organization {
   slug: string;
   contact_email: string | null;
   contact_phone: string | null;
-  pin_code: string;
+  pin_code?: string;  // Only returned to admins, not to org users
   signer_full_name: string;
   signer_position: string;
   qr_code_url: string | null;

@@ -3,7 +3,7 @@ interface CellRowProps {
   cellSize?: number;
 }
 
-export function CellRow({ chars, cellSize = 16 }: CellRowProps) {
+export function CellRow({ chars, cellSize = 18 }: CellRowProps) {
   return (
     <span className="inline-flex">
       {chars.map((ch, i) => (
@@ -32,7 +32,7 @@ interface LabeledCellsProps {
   className?: string;
 }
 
-export function LabeledCells({ label, chars, cellSize = 16, className = '' }: LabeledCellsProps) {
+export function LabeledCells({ label, chars, cellSize = 18, className = '' }: LabeledCellsProps) {
   return (
     <span className={`inline-flex items-baseline gap-1 ${className}`}>
       <span className="text-[10px] whitespace-nowrap">{label}</span>
@@ -48,9 +48,9 @@ interface DateCellsProps {
   cellSize?: number;
 }
 
-export function DateCells({ day, month, year, cellSize = 16 }: DateCellsProps) {
+export function DateCells({ day, month, year, cellSize = 18 }: DateCellsProps) {
   return (
-    <span className="inline-flex items-baseline gap-0">
+    <span className="inline-flex items-center gap-0">
       <CellRow chars={day} cellSize={cellSize} />
       <span className="mx-0.5 text-[10px]">.</span>
       <CellRow chars={month} cellSize={cellSize} />

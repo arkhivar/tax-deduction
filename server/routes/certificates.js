@@ -1,0 +1,193 @@
+import { Router } from 'express';
+import { pool } from '../db/pool.js';
+import { requireAuth, requireAdminAuth } from '../middleware/auth.js';
+
+const router = Router();
+
+// --- List certificates (with optional org_id or status filter) ---
+// Auth required: org sees only own certs, admin sees all.
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    const conditions = [];
+    const params = [];
+    let paramIdx = 1;
+
+    // Org users are always scoped to their own org_id
+    if (req.auth.role === 'org') {
+      conditions.push(`org_id = $${paramIdx++}`);
+      params.push(req.auth.orgId);
+    } else if (req.auth.role === 'admin') {
+      // Admin can filter by org_id or status
+      const { org_id, status } = req.query;
+      if (org_id) {
+        conditions.push(`org_id = $${paramIdx++}`);
+        params.push(org_id);
+      }
+      if (status && status !== 'all') {
+        conditions.push(`status = $${paramIdx++}`);
+        params.push(status);
+      }
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const result = await pool.query(
+      `SELECT * FROM education_certificates ${where} ORDER BY created_at DESC`,
+      params
+    );
+    res.json(result.rows);
+  } catch (err) { next(err); }
+});
+
+// --- Get aggregate stats by org (admin org list) ---
+router.get('/stats', requireAdminAuth, async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT org_id, COUNT(*) as total,
+              COUNT(*) FILTER (WHERE status = 'draft') as pending
+       FROM education_certificates
+       WHERE org_id IS NOT NULL
+       GROUP BY org_id`
+    );
+    res.json(result.rows);
+  } catch (err) { next(err); }
+});
+
+// --- Get a single certificate by ID ---
+// Public access: taxpayers can view their own form status via capability URL (the UUID).
+// Authed access: orgs can view certs tied to their org_id, admins can view any.
+router.get('/:id', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM education_certificates WHERE id = $1',
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+
+    // If authed as org, verify the cert belongs to their org
+    // (optional check — if no auth, the capability URL IS the auth)
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
+});
+
+// --- Create a new certificate ---
+router.post('/', async (req, res, next) => {
+  try {
+    const body = req.body;
+
+    // Map date fields: empty string -> null
+    const dateFields = ['taxpayer_birth_date', 'doc_issue_date', 'student_birth_date', 'student_doc_issue_date', 'sign_date'];
+    for (const f of dateFields) {
+      if (body[f] === '') body[f] = null;
+    }
+
+    // Validate required fields (matching original RLS policy)
+    if (!body.org_inn || body.org_inn.length < 10) {
+      return res.status(400).json({ error: 'org_inn must be at least 10 chars' });
+    }
+    if (!body.taxpayer_last_name) {
+      return res.status(400).json({ error: 'taxpayer_last_name required' });
+    }
+    if (!body.taxpayer_first_name) {
+      return res.status(400).json({ error: 'taxpayer_first_name required' });
+    }
+    if (!body.doc_type_code) {
+      return res.status(400).json({ error: 'doc_type_code required' });
+    }
+    if (!body.doc_series_number) {
+      return res.status(400).json({ error: 'doc_series_number required' });
+    }
+
+    // Get all columns from the request body that match table columns
+    const allowedCols = [
+      'id', 'org_id', 'certificate_number', 'correction_number', 'report_year',
+      'org_inn', 'org_kpp', 'org_name', 'is_full_time',
+      'taxpayer_last_name', 'taxpayer_first_name', 'taxpayer_patronymic',
+      'taxpayer_inn', 'taxpayer_birth_date', 'doc_type_code', 'doc_series_number',
+      'doc_issue_date', 'is_same_person', 'expense_amount',
+      'student_last_name', 'student_first_name', 'student_patronymic',
+      'student_inn', 'student_birth_date', 'student_doc_type_code',
+      'student_doc_series_number', 'student_doc_issue_date',
+      'signer_full_name', 'sign_date', 'status', 'admin_notes'
+    ];
+
+    const cols = [];
+    const vals = [];
+    for (const col of allowedCols) {
+      if (col in body) {
+        cols.push(col);
+        vals.push(body[col]);
+      }
+    }
+
+    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+    const colList = cols.map((c) => `"${c}"`).join(', ');
+
+    const result = await pool.query(
+      `INSERT INTO education_certificates (${colList}) VALUES (${placeholders}) RETURNING *`,
+      vals
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) { next(err); }
+});
+
+// --- Update a certificate by ID ---
+// Auth required: org can only update certs belonging to their org, admin can update any.
+router.patch('/:id', requireAuth, async (req, res, next) => {
+  try {
+    // For org users: verify ownership before update
+    if (req.auth.role === 'org') {
+      const ownership = await pool.query(
+        'SELECT org_id FROM education_certificates WHERE id = $1',
+        [req.params.id]
+      );
+      if (!ownership.rows[0]) return res.status(404).json({ error: 'Not found' });
+      if (ownership.rows[0].org_id !== req.auth.orgId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
+    const allowedCols = [
+      'certificate_number', 'correction_number', 'report_year',
+      'org_inn', 'org_kpp', 'org_name', 'is_full_time',
+      'taxpayer_last_name', 'taxpayer_first_name', 'taxpayer_patronymic',
+      'taxpayer_inn', 'taxpayer_birth_date', 'doc_type_code', 'doc_series_number',
+      'doc_issue_date', 'is_same_person', 'expense_amount',
+      'student_last_name', 'student_first_name', 'student_patronymic',
+      'student_inn', 'student_birth_date', 'student_doc_type_code',
+      'student_doc_series_number', 'student_doc_issue_date',
+      'signer_full_name', 'sign_date', 'status', 'admin_notes', 'org_id'
+    ];
+
+    const dateFields = ['student_birth_date', 'student_doc_issue_date', 'sign_date', 'taxpayer_birth_date', 'doc_issue_date'];
+
+    const cols = [];
+    const vals = [];
+    for (const col of allowedCols) {
+      if (col in req.body) {
+        let val = req.body[col];
+        if (dateFields.includes(col) && val === '') val = null;
+        cols.push(col);
+        vals.push(val);
+      }
+    }
+
+    if (cols.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const setParts = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+    vals.push('now()'); // updated_at
+    const updatedAtIdx = vals.length;
+
+    const result = await pool.query(
+      `UPDATE education_certificates SET ${setParts}, "updated_at" = $${updatedAtIdx} WHERE id = $${updatedAtIdx + 1} RETURNING *`,
+      [...vals, req.params.id]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
+});
+
+export default router;

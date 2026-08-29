@@ -25,7 +25,7 @@ export function formatDateToCells(dateStr: string): { day: string[]; month: stri
 export function formatAmountToCells(amount: number): { integer: string[]; decimal: string[] } {
   const parts = amount.toFixed(2).split('.');
   return {
-    integer: padChars(parts[0].padStart(12, ''), 12),
+    integer: padChars(parts[0].padStart(12, ' '), 12),
     decimal: padChars(parts[1], 2),
   };
 }

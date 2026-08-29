@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Save, Printer, CheckCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { Certificate } from '../../types/certificate';
 import { AdminLayout } from './AdminLayout';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
+import { DateInput } from '../ui/DateInput';
+import { SignerNameInput } from '../ui/SignerNameInput';
 
 interface CertificateEditProps {
   certificateId: string;
@@ -24,11 +27,7 @@ export function CertificateEdit({ certificateId, onBack, onPrint }: CertificateE
 
   const loadCertificate = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('education_certificates')
-      .select('*')
-      .eq('id', certificateId)
-      .maybeSingle();
+    const { data } = await api.certificates.get(certificateId);
     setCert(data);
     setLoading(false);
   };
@@ -42,41 +41,38 @@ export function CertificateEdit({ certificateId, onBack, onPrint }: CertificateE
   const handleSave = async () => {
     if (!cert) return;
     setSaving(true);
-    await supabase
-      .from('education_certificates')
-      .update({
-        certificate_number: cert.certificate_number,
-        correction_number: cert.correction_number,
-        report_year: cert.report_year,
-        signer_full_name: cert.signer_full_name,
-        sign_date: cert.sign_date || null,
-        status: cert.status,
-        admin_notes: cert.admin_notes,
-        org_inn: cert.org_inn,
-        org_kpp: cert.org_kpp,
-        org_name: cert.org_name,
-        is_full_time: cert.is_full_time,
-        taxpayer_last_name: cert.taxpayer_last_name,
-        taxpayer_first_name: cert.taxpayer_first_name,
-        taxpayer_patronymic: cert.taxpayer_patronymic,
-        taxpayer_inn: cert.taxpayer_inn,
-        taxpayer_birth_date: cert.taxpayer_birth_date,
-        doc_type_code: cert.doc_type_code,
-        doc_series_number: cert.doc_series_number,
-        doc_issue_date: cert.doc_issue_date,
-        is_same_person: cert.is_same_person,
-        expense_amount: cert.expense_amount,
-        student_last_name: cert.student_last_name,
-        student_first_name: cert.student_first_name,
-        student_patronymic: cert.student_patronymic,
-        student_inn: cert.student_inn,
-        student_birth_date: cert.student_birth_date || null,
-        student_doc_type_code: cert.student_doc_type_code,
-        student_doc_series_number: cert.student_doc_series_number,
-        student_doc_issue_date: cert.student_doc_issue_date || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', certificateId);
+    await api.certificates.update(certificateId, {
+      certificate_number: cert.certificate_number,
+      correction_number: cert.correction_number,
+      report_year: cert.report_year,
+      signer_full_name: cert.signer_full_name,
+      sign_date: cert.sign_date || null,
+      status: cert.status,
+      admin_notes: cert.admin_notes,
+      org_inn: cert.org_inn,
+      org_kpp: cert.org_kpp,
+      org_name: cert.org_name,
+      is_full_time: cert.is_full_time,
+      taxpayer_last_name: cert.taxpayer_last_name,
+      taxpayer_first_name: cert.taxpayer_first_name,
+      taxpayer_patronymic: cert.taxpayer_patronymic,
+      taxpayer_inn: cert.taxpayer_inn,
+      taxpayer_birth_date: cert.taxpayer_birth_date,
+      doc_type_code: cert.doc_type_code,
+      doc_series_number: cert.doc_series_number,
+      doc_issue_date: cert.doc_issue_date,
+      is_same_person: cert.is_same_person,
+      expense_amount: cert.expense_amount,
+      student_last_name: cert.student_last_name,
+      student_first_name: cert.student_first_name,
+      student_patronymic: cert.student_patronymic,
+      student_inn: cert.student_inn,
+      student_birth_date: cert.student_birth_date || null,
+      student_doc_type_code: cert.student_doc_type_code,
+      student_doc_series_number: cert.student_doc_series_number,
+      student_doc_issue_date: cert.student_doc_issue_date || null,
+      updated_at: new Date().toISOString(),
+    });
     setSaving(false);
     setSaved(true);
   };
@@ -86,8 +82,6 @@ export function CertificateEdit({ certificateId, onBack, onPrint }: CertificateE
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -167,14 +161,12 @@ function AdminFieldsSection({ cert, updateField }: FieldSectionProps) {
         <FormField label="Номер справки">
           <Input
             value={cert.certificate_number}
-            onChange={(e) => updateField('certificate_number', e.target.value)}
-          />
+            onChange={(e) => updateField('certificate_number', e.target.value)} uppercase />
         </FormField>
         <FormField label="Номер корректировки">
           <Input
             value={cert.correction_number}
-            onChange={(e) => updateField('correction_number', e.target.value)}
-          />
+            onChange={(e) => updateField('correction_number', e.target.value)} uppercase />
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -199,17 +191,15 @@ function AdminFieldsSection({ cert, updateField }: FieldSectionProps) {
         </FormField>
       </div>
       <FormField label="ФИО подписанта">
-        <Input
+        <SignerNameInput
           value={cert.signer_full_name}
-          onChange={(e) => updateField('signer_full_name', e.target.value)}
-          placeholder="Фамилия Имя Отчество"
+          onChange={(fullName) => updateField('signer_full_name', fullName)}
         />
       </FormField>
       <FormField label="Дата подписи">
-        <Input
-          type="date"
+        <DateInput
           value={cert.sign_date || ''}
-          onChange={(e) => updateField('sign_date', e.target.value)}
+          onChange={(iso) => updateField('sign_date', iso)}
         />
       </FormField>
       <FormField label="Заметки администратора">
@@ -238,22 +228,23 @@ function OrgDataSection({ cert, updateField }: FieldSectionProps) {
           <Input
             value={cert.org_inn}
             onChange={(e) => updateField('org_inn', e.target.value.replace(/\D/g, '').slice(0, 10))}
+            uppercase
           />
         </FormField>
         <FormField label="КПП">
           <Input
             value={cert.org_kpp}
             onChange={(e) => updateField('org_kpp', e.target.value.replace(/\D/g, '').slice(0, 9))}
+            uppercase
           />
         </FormField>
       </div>
       <FormField label="Наименование организации">
-        <textarea
+        <Textarea
           value={cert.org_name}
           onChange={(e) => updateField('org_name', e.target.value)}
           rows={2}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm
-            focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 resize-none"
+          uppercase
         />
       </FormField>
       <FormField label="Очная форма обучения">
@@ -292,20 +283,17 @@ function TaxpayerDataSection({ cert, updateField }: FieldSectionProps) {
         <FormField label="Фамилия">
           <Input
             value={cert.taxpayer_last_name}
-            onChange={(e) => updateField('taxpayer_last_name', e.target.value)}
-          />
+            onChange={(e) => updateField('taxpayer_last_name', e.target.value)} uppercase />
         </FormField>
         <FormField label="Имя">
           <Input
             value={cert.taxpayer_first_name}
-            onChange={(e) => updateField('taxpayer_first_name', e.target.value)}
-          />
+            onChange={(e) => updateField('taxpayer_first_name', e.target.value)} uppercase />
         </FormField>
         <FormField label="Отчество">
           <Input
             value={cert.taxpayer_patronymic}
-            onChange={(e) => updateField('taxpayer_patronymic', e.target.value)}
-          />
+            onChange={(e) => updateField('taxpayer_patronymic', e.target.value)} uppercase />
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -313,35 +301,32 @@ function TaxpayerDataSection({ cert, updateField }: FieldSectionProps) {
           <Input
             value={cert.taxpayer_inn}
             onChange={(e) => updateField('taxpayer_inn', e.target.value.replace(/\D/g, '').slice(0, 12))}
+            uppercase
           />
         </FormField>
         <FormField label="Дата рождения">
-          <Input
-            type="date"
-            value={cert.taxpayer_birth_date}
-            onChange={(e) => updateField('taxpayer_birth_date', e.target.value)}
-          />
+          <DateInput
+          value={cert.taxpayer_birth_date}
+          onChange={(iso) => updateField('taxpayer_birth_date', iso)}
+        />
         </FormField>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <FormField label="Код документа">
           <Input
             value={cert.doc_type_code}
-            onChange={(e) => updateField('doc_type_code', e.target.value)}
-          />
+            onChange={(e) => updateField('doc_type_code', e.target.value)} uppercase />
         </FormField>
         <FormField label="Серия и номер">
           <Input
             value={cert.doc_series_number}
-            onChange={(e) => updateField('doc_series_number', e.target.value)}
-          />
+            onChange={(e) => updateField('doc_series_number', e.target.value)} uppercase />
         </FormField>
         <FormField label="Дата выдачи">
-          <Input
-            type="date"
-            value={cert.doc_issue_date}
-            onChange={(e) => updateField('doc_issue_date', e.target.value)}
-          />
+          <DateInput
+          value={cert.doc_issue_date}
+          onChange={(iso) => updateField('doc_issue_date', iso)}
+        />
         </FormField>
       </div>
     </div>
@@ -397,32 +382,32 @@ function StudentDataSection({ cert, updateField }: FieldSectionProps) {
       </h3>
       <div className="grid grid-cols-3 gap-3">
         <FormField label="Фамилия">
-          <Input value={cert.student_last_name} onChange={(e) => updateField('student_last_name', e.target.value)} />
+          <Input value={cert.student_last_name} onChange={(e) => updateField('student_last_name', e.target.value)} uppercase />
         </FormField>
         <FormField label="Имя">
-          <Input value={cert.student_first_name} onChange={(e) => updateField('student_first_name', e.target.value)} />
+          <Input value={cert.student_first_name} onChange={(e) => updateField('student_first_name', e.target.value)} uppercase />
         </FormField>
         <FormField label="Отчество">
-          <Input value={cert.student_patronymic} onChange={(e) => updateField('student_patronymic', e.target.value)} />
+          <Input value={cert.student_patronymic} onChange={(e) => updateField('student_patronymic', e.target.value)} uppercase />
         </FormField>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <FormField label="ИНН">
-          <Input value={cert.student_inn} onChange={(e) => updateField('student_inn', e.target.value.replace(/\D/g, '').slice(0, 12))} />
+          <Input value={cert.student_inn} onChange={(e) => updateField('student_inn', e.target.value.replace(/\D/g, '').slice(0, 12))} uppercase />
         </FormField>
         <FormField label="Дата рождения">
-          <Input type="date" value={cert.student_birth_date || ''} onChange={(e) => updateField('student_birth_date', e.target.value)} />
+          <DateInput value={cert.student_birth_date || ''} onChange={(iso) => updateField('student_birth_date', iso)} />
         </FormField>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <FormField label="Код документа">
-          <Input value={cert.student_doc_type_code} onChange={(e) => updateField('student_doc_type_code', e.target.value)} />
+          <Input value={cert.student_doc_type_code} onChange={(e) => updateField('student_doc_type_code', e.target.value)} uppercase />
         </FormField>
         <FormField label="Серия и номер">
-          <Input value={cert.student_doc_series_number} onChange={(e) => updateField('student_doc_series_number', e.target.value)} />
+          <Input value={cert.student_doc_series_number} onChange={(e) => updateField('student_doc_series_number', e.target.value)} uppercase />
         </FormField>
         <FormField label="Дата выдачи">
-          <Input type="date" value={cert.student_doc_issue_date || ''} onChange={(e) => updateField('student_doc_issue_date', e.target.value)} />
+          <DateInput value={cert.student_doc_issue_date || ''} onChange={(iso) => updateField('student_doc_issue_date', iso)} />
         </FormField>
       </div>
     </div>
