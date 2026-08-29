@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, LayoutDashboard, Settings, LogOut, Home } from 'lucide-react';
+import { FileText, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import { useOrg } from '../../contexts/OrgContext';
 
 interface OrgLayoutProps {
@@ -20,10 +20,14 @@ export function OrgLayout({ children }: OrgLayoutProps) {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-gray-900 hover:underline underline-offset-4"
+              title="Вернуться к форме"
+            >
               <FileText className="w-5 h-5 text-gray-700" />
-              <span className="font-semibold text-gray-900 text-sm hidden sm:block">КНД 1151158</span>
-            </div>
+              <span className="font-semibold text-sm hidden sm:block">Форма КНД 1151158</span>
+            </Link>
             <div className="h-5 w-px bg-gray-200" />
             <nav className="flex items-center gap-1">
               {navItems.map((item) => {
@@ -47,14 +51,6 @@ export function OrgLayout({ children }: OrgLayoutProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-1.5 rounded-md transition-colors"
-              title="Вернуться к форме"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Вернуться к форме</span>
-            </Link>
             <span className="text-xs text-gray-500 hidden sm:block max-w-[200px] truncate">
               {org?.name}
             </span>
