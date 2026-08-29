@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -68,9 +68,13 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [innLoading, setInnLoading] = useState(false);
+  // DaData's short/full names, kept for org auto-registration (form's org_name
+  // intentionally shows the full name on the certificate itself)
+  const orgLookupRef = useRef<{ shortName?: string; fullName?: string }>({});
 
   const handleInnResult = useCallback((result: { found: boolean; name?: string; full_name?: string; kpp?: string }) => {
     if (result.found) {
+      orgLookupRef.current = { shortName: result.name, fullName: result.full_name };
       setFormData((prev) => ({
         ...prev,
         org_name: result.full_name || result.name || prev.org_name,
@@ -139,7 +143,8 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
         const { data: newOrg, error: orgError } = await api.organizations.findOrCreate(
           formData.org_inn,
           formData.org_kpp,
-          formData.org_name
+          orgLookupRef.current.shortName || formData.org_name,
+          orgLookupRef.current.fullName
         );
 
         if (orgError || !newOrg) {

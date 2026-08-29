@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, AlertCircle, CheckCircle, Copy } from 'lucide-react';
+import { FileText, AlertCircle, CheckCircle, Copy, Loader2 } from 'lucide-react';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useInnLookup } from '../hooks/useInnLookup';
 import { api } from '../lib/api';
+import { getPublicOrigin } from '../lib/publicLink';
 import { useOrg } from '../contexts/OrgContext';
 import type { Organization } from '../types/certificate';
 
@@ -11,6 +13,8 @@ export function OrgRegisterPage() {
   const [inn, setInn] = useState('');
   const [kpp, setKpp] = useState('');
   const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [innLoading, setInnLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
@@ -22,7 +26,16 @@ export function OrgRegisterPage() {
   const { login } = useOrg();
   const navigate = useNavigate();
 
-  const publicLink = `${window.location.origin}/${registeredOrg?.slug || inn}`;
+  const publicLink = `${getPublicOrigin()}/${registeredOrg?.slug || inn}`;
+
+  // Auto-fill short name, full name and KPP from DaData once the INN is complete
+  const handleInnResult = useCallback((result: { found: boolean; name?: string; full_name?: string; kpp?: string }) => {
+    if (!result.found) return;
+    if (result.name) setName(result.name);
+    setFullName(result.full_name || '');
+    if (result.kpp) setKpp(result.kpp);
+  }, []);
+  const lookupInn = useInnLookup(handleInnResult, setInnLoading);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +52,7 @@ export function OrgRegisterPage() {
       inn,
       kpp,
       name: name.trim(),
+      full_name: fullName || undefined,
       slug: inn,
       contact_email: email.trim() || undefined,
       pin_code: pin,
@@ -131,13 +145,23 @@ export function OrgRegisterPage() {
               <input
                 type="text"
                 value={inn}
-                onChange={(e) => setInn(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setInn(v);
+                  lookupInn(v);
+                }}
                 placeholder="10 цифр"
                 maxLength={10}
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm
                   focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                   placeholder:text-gray-400"
               />
+              {innLoading && (
+                <p className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Поиск организации...
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">КПП</label>
@@ -160,7 +184,7 @@ export function OrgRegisterPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Полное наименование"
+              placeholder='Краткое, например ООО «Пример»'
               className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm
                 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500
                 placeholder:text-gray-400"

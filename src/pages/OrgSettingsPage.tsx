@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Upload, X, Save, CheckCircle, AlertCircle, Copy, Link2, Image, Info, ArrowLeft,
+  Upload, X, Save, CheckCircle, AlertCircle, Copy, Link2, Image, Info, ArrowLeft, RefreshCw,
 } from 'lucide-react';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { api } from '../lib/api';
+import { getPublicOrigin } from '../lib/publicLink';
 import { useOrg } from '../contexts/OrgContext';
 import { useAdminAuth } from '../contexts/AdminAuthContext';
 import { OrgLayout } from '../components/org/OrgLayout';
@@ -16,7 +17,7 @@ import type { Organization } from '../types/certificate';
 
 function buildPublicLink(org: { slug: string } | null) {
   if (!org) return '';
-  return `${window.location.origin}/${org.slug}`;
+  return `${getPublicOrigin()}/${org.slug}`;
 }
 
 interface OrgSettingsPageProps {
@@ -209,6 +210,7 @@ function FullNameSection({ org, onUpdate }: { org: Organization; onUpdate: (o: O
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setFullName(org?.full_name || '');
@@ -231,10 +233,36 @@ function FullNameSection({ org, onUpdate }: { org: Organization; onUpdate: (o: O
     setTimeout(() => setSaved(false), 2000);
   };
 
+  // Pull the authoritative short and full names from DaData by INN
+  const handleRefreshFromDadata = async () => {
+    setRefreshing(true);
+    setError('');
+    const { data, error: lookupError } = await api.innLookup(org.inn);
+
+    if (lookupError || !data?.found || !data.name) {
+      setRefreshing(false);
+      setError('Организация не найдена в DaData. Проверьте ИНН.');
+      return;
+    }
+
+    const { data: updated, error: dbError } = await api.organizations.update(org.id, {
+      name: data.name,
+      full_name: data.full_name || null,
+    });
+    setRefreshing(false);
+
+    if (dbError || !updated) {
+      setError('Ошибка сохранения');
+      return;
+    }
+    setFullName(data.full_name || '');
+    onUpdate(updated as Organization);
+  };
+
   return (
-    <Section title="Полное наименование организации">
+    <Section title="Наименование организации">
       <p className="text-sm text-gray-600 mb-3">
-        Полное официальное наименование без сокращений. Используется при заполнении справок вместо краткого названия.
+        Краткое название показывается в личном кабинете, полное — используется при заполнении справок.
       </p>
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-3">
@@ -245,11 +273,23 @@ function FullNameSection({ org, onUpdate }: { org: Organization; onUpdate: (o: O
       <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Краткое название</label>
-          <input
-            value={(org?.name || '').toUpperCase()}
-            disabled
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-500 cursor-not-allowed uppercase"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              value={(org?.name || '').toUpperCase()}
+              disabled
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-500 cursor-not-allowed uppercase"
+            />
+            <button
+              onClick={handleRefreshFromDadata}
+              disabled={refreshing}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-300
+                bg-white hover:bg-gray-50 text-sm text-gray-700 transition-colors disabled:opacity-50"
+              title="Подтянуть краткое и полное наименование из DaData по ИНН"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Из DaData
+            </button>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Полное наименование</label>

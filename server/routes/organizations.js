@@ -96,7 +96,7 @@ router.get('/resolve-inn', async (req, res, next) => {
 // --- Register a new organization ---
 router.post('/', async (req, res, next) => {
   try {
-    const { inn, kpp, name, slug, contact_email, pin_code } = req.body;
+    const { inn, kpp, name, full_name, slug, contact_email, pin_code } = req.body;
 
     if (!inn || inn.length !== 10) {
       return res.status(400).json({ error: 'INN must be 10 digits' });
@@ -108,10 +108,10 @@ router.post('/', async (req, res, next) => {
     const finalSlug = slug || inn;
 
     const result = await pool.query(
-      `INSERT INTO organizations (inn, kpp, name, slug, contact_email, pin_code)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO organizations (inn, kpp, name, full_name, slug, contact_email, pin_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [inn, kpp || '', name || '', finalSlug, contact_email || null, pin_code]
+      [inn, kpp || '', name || '', full_name || null, finalSlug, contact_email || null, pin_code]
     );
 
     res.status(201).json(result.rows[0]);
@@ -127,7 +127,7 @@ router.post('/', async (req, res, next) => {
 router.post('/find-or-create', async (req, res, next) => {
   const client = await pool.connect();
   try {
-    const { inn, kpp, name } = req.body;
+    const { inn, kpp, name, full_name } = req.body;
     if (!inn) return res.status(400).json({ error: 'INN required' });
 
     // Try to find existing
@@ -142,10 +142,10 @@ router.post('/find-or-create', async (req, res, next) => {
     const randomPin = String(Math.floor(10000000 + Math.random() * 90000000));
     const slug = inn;
     result = await client.query(
-      `INSERT INTO organizations (inn, kpp, name, slug, pin_code)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO organizations (inn, kpp, name, full_name, slug, pin_code)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      [inn, kpp || '', name || '', slug, randomPin]
+      [inn, kpp || '', name || '', full_name || null, slug, randomPin]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {

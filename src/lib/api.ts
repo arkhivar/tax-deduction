@@ -129,6 +129,7 @@ export const api = {
       inn: string;
       kpp: string;
       name: string;
+      full_name?: string;
       slug?: string;
       contact_email?: string;
       pin_code: string;
@@ -140,10 +141,10 @@ export const api = {
     },
 
     // --- Find or create org by INN (PdfForm auto-registration) ---
-    async findOrCreate(inn: string, kpp?: string, name?: string) {
+    async findOrCreate(inn: string, kpp?: string, name?: string, fullName?: string) {
       return request<{ id: string }>('/organizations/find-or-create', {
         method: 'POST',
-        body: JSON.stringify({ inn, kpp, name }),
+        body: JSON.stringify({ inn, kpp, name, full_name: fullName }),
       });
     },
 
