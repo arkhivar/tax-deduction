@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { RefreshCw, Eye, Printer, Search, Filter, Copy, CheckCircle, Link2, Plus } from 'lucide-react';
 import { api } from '../lib/api';
+import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate } from '../types/certificate';
 import { useOrg } from '../contexts/OrgContext';
 import { OrgLayout } from '../components/org/OrgLayout';
@@ -25,7 +26,7 @@ export function OrgDashboardPage() {
   const [copied, setCopied] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const publicLink = `${window.location.origin}/${org?.slug || org?.inn}`;
+  const publicLink = `${getPublicOrigin()}/${org?.slug || org?.inn}`;
 
   const fetchCertificates = async () => {
     if (!org) return;

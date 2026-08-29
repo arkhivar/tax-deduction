@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Link2, Copy, Check } from 'lucide-react';
 import { api } from '../../lib/api';
+import { getPublicOrigin } from '../../lib/publicLink';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
 
@@ -58,7 +59,7 @@ export function CreateCertificateDialog({ orgSlug, onClose, onCreated }: CreateC
       return;
     }
 
-    setShareLink(`${window.location.origin}/${orgSlug}/${data.id}`);
+    setShareLink(`${getPublicOrigin()}/${orgSlug}/${data.id}`);
     setCopied(false);
     setLastName('');
     setFirstName('');
