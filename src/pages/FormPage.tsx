@@ -22,6 +22,34 @@ function generateId(): string {
   });
 }
 
+// Map a draft certificate (possibly created by the org with placeholder
+// values) to form prefill data. Placeholders become empty fields.
+function draftToFormData(cert: Certificate): Partial<CertificateFormData> {
+  const dateOrEmpty = (d: string | null) => (!d || d === '1900-01-01' ? '' : d);
+  return {
+    report_year: cert.report_year || '',
+    is_full_time: cert.is_full_time,
+    taxpayer_last_name: cert.taxpayer_last_name,
+    taxpayer_first_name: cert.taxpayer_first_name,
+    taxpayer_patronymic: cert.taxpayer_patronymic,
+    taxpayer_inn: cert.taxpayer_inn,
+    taxpayer_birth_date: dateOrEmpty(cert.taxpayer_birth_date),
+    doc_type_code: cert.doc_type_code || '21',
+    doc_series_number: cert.doc_series_number === '—' ? '' : cert.doc_series_number,
+    doc_issue_date: dateOrEmpty(cert.doc_issue_date),
+    is_same_person: cert.is_same_person,
+    expense_amount: Number(cert.expense_amount) || 0,
+    student_last_name: cert.student_last_name,
+    student_first_name: cert.student_first_name,
+    student_patronymic: cert.student_patronymic,
+    student_inn: cert.student_inn,
+    student_birth_date: dateOrEmpty(cert.student_birth_date),
+    student_doc_type_code: cert.student_doc_type_code || '03',
+    student_doc_series_number: cert.student_doc_series_number,
+    student_doc_issue_date: dateOrEmpty(cert.student_doc_issue_date),
+  };
+}
+
 export function FormPage() {
   usePageTitle('Заполнение справки');
   const { orgInn, slug, formId } = useParams<{ orgInn?: string; slug?: string; formId?: string }>();
@@ -123,9 +151,12 @@ export function FormPage() {
     );
   }
 
-  if (existingCert) {
+  // Submitted certificates show a read-only status page; drafts (e.g. created
+  // by the org from the dashboard) open as a prefilled editable form.
+  if (existingCert && existingCert.status !== 'draft') {
     return <FormStatusView cert={existingCert} />;
   }
+  const draftCert = existingCert; // only drafts reach this point
 
   if (notFound && identifier) {
     return (
@@ -222,6 +253,22 @@ export function FormPage() {
               orgLocked
               orgIdentifier={identifier}
               orgQrUrl={orgData.qr_code_url || undefined}
+              initialData={draftCert ? draftToFormData(draftCert) : undefined}
+              draftExists={!!draftCert}
+              onNewForm={handleNewForm}
+              onPrint={(formData) => setPrintData(buildPrintCertificate(formData))}
+            />
+          ) : draftCert ? (
+            <PdfForm
+              formId={formId}
+              orgId={draftCert.org_id || undefined}
+              orgInn={draftCert.org_inn}
+              orgKpp={draftCert.org_kpp}
+              orgName={draftCert.org_name}
+              orgLocked
+              orgIdentifier={identifier}
+              initialData={draftToFormData(draftCert)}
+              draftExists
               onNewForm={handleNewForm}
               onPrint={(formData) => setPrintData(buildPrintCertificate(formData))}
             />

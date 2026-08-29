@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
-import { requireAuth, requireAdminAuth } from '../middleware/auth.js';
+import { requireAuth, requireOrgAuth, requireAdminAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -49,6 +49,50 @@ router.get('/stats', requireAdminAuth, async (_req, res, next) => {
        GROUP BY org_id`
     );
     res.json(result.rows);
+  } catch (err) { next(err); }
+});
+
+// --- Create a draft certificate (org dashboard quick entry) ---
+// Auth required: org only; org_id is forced from the token. Minimal fields
+// (name + optional amount); NOT NULL columns get placeholders that the
+// taxpayer or org replaces later via the complete endpoint / edit page.
+router.post('/draft', requireOrgAuth, async (req, res, next) => {
+  try {
+    const { taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic, expense_amount } = req.body;
+
+    if (!taxpayer_last_name || !taxpayer_first_name) {
+      return res.status(400).json({ error: 'taxpayer_last_name and taxpayer_first_name required' });
+    }
+    const amount = expense_amount === undefined || expense_amount === null || expense_amount === ''
+      ? 0
+      : Number(expense_amount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      return res.status(400).json({ error: 'expense_amount must be a non-negative number' });
+    }
+
+    const orgResult = await pool.query(
+      'SELECT inn, kpp, name FROM organizations WHERE id = $1',
+      [req.auth.orgId]
+    );
+    if (!orgResult.rows[0]) return res.status(404).json({ error: 'Organization not found' });
+    const org = orgResult.rows[0];
+
+    const result = await pool.query(
+      `INSERT INTO education_certificates (
+         org_id, org_inn, org_kpp, org_name,
+         taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic,
+         expense_amount,
+         doc_type_code, doc_series_number, taxpayer_birth_date, doc_issue_date
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', '—', '1900-01-01', '1900-01-01')
+       RETURNING *`,
+      [
+        req.auth.orgId, org.inn, org.kpp, org.name,
+        taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic || '',
+        amount,
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
   } catch (err) { next(err); }
 });
 
@@ -128,6 +172,81 @@ router.post('/', async (req, res, next) => {
     );
 
     res.status(201).json(result.rows[0]);
+  } catch (err) { next(err); }
+});
+
+// --- Complete an existing draft (taxpayer fills out the rest via shared link) ---
+// Public access: the capability URL (the UUID) IS the auth, same as GET /:id.
+// Only drafts can be completed; org identity, id, status and admin fields are locked.
+router.post('/:id/complete', async (req, res, next) => {
+  try {
+    const body = req.body;
+
+    const existing = await pool.query(
+      'SELECT status FROM education_certificates WHERE id = $1',
+      [req.params.id]
+    );
+    if (!existing.rows[0]) return res.status(404).json({ error: 'Not found' });
+    if (existing.rows[0].status !== 'draft') {
+      return res.status(409).json({ error: 'Certificate already submitted' });
+    }
+
+    // Map date fields: empty string -> null
+    const dateFields = ['taxpayer_birth_date', 'doc_issue_date', 'student_birth_date', 'student_doc_issue_date', 'sign_date'];
+    for (const f of dateFields) {
+      if (body[f] === '') body[f] = null;
+    }
+
+    // Same required-field validation as the public create route
+    if (!body.taxpayer_last_name) {
+      return res.status(400).json({ error: 'taxpayer_last_name required' });
+    }
+    if (!body.taxpayer_first_name) {
+      return res.status(400).json({ error: 'taxpayer_first_name required' });
+    }
+    if (!body.doc_type_code) {
+      return res.status(400).json({ error: 'doc_type_code required' });
+    }
+    if (!body.doc_series_number) {
+      return res.status(400).json({ error: 'doc_series_number required' });
+    }
+
+    // Taxpayer-editable columns only: no id, org_id, org_inn/org_kpp/org_name,
+    // status, admin_notes, certificate_number, correction_number.
+    const allowedCols = [
+      'report_year', 'is_full_time',
+      'taxpayer_last_name', 'taxpayer_first_name', 'taxpayer_patronymic',
+      'taxpayer_inn', 'taxpayer_birth_date', 'doc_type_code', 'doc_series_number',
+      'doc_issue_date', 'is_same_person', 'expense_amount',
+      'student_last_name', 'student_first_name', 'student_patronymic',
+      'student_inn', 'student_birth_date', 'student_doc_type_code',
+      'student_doc_series_number', 'student_doc_issue_date',
+      'signer_full_name', 'sign_date'
+    ];
+
+    const cols = [];
+    const vals = [];
+    for (const col of allowedCols) {
+      if (col in body) {
+        cols.push(col);
+        vals.push(body[col]);
+      }
+    }
+
+    if (cols.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const setParts = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+    vals.push('now()'); // updated_at
+    const updatedAtIdx = vals.length;
+
+    const result = await pool.query(
+      `UPDATE education_certificates SET ${setParts}, "updated_at" = $${updatedAtIdx} WHERE id = $${updatedAtIdx + 1} RETURNING *`,
+      [...vals, req.params.id]
+    );
+
+    res.json(result.rows[0]);
   } catch (err) { next(err); }
 });
 

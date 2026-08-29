@@ -20,6 +20,8 @@ interface PdfFormProps {
   orgLocked?: boolean;
   orgIdentifier?: string;
   orgQrUrl?: string;
+  initialData?: Partial<CertificateFormData>;
+  draftExists?: boolean;
   onNewForm?: () => void;
   onPrint?: (formData: CertificateFormData) => void;
 }
@@ -53,9 +55,10 @@ const initialFormData: CertificateFormData = {
   student_doc_issue_date: '',
 };
 
-export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = false, orgIdentifier, orgQrUrl, onNewForm, onPrint }: PdfFormProps) {
+export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = false, orgIdentifier, orgQrUrl, initialData, draftExists = false, onNewForm, onPrint }: PdfFormProps) {
   const [formData, setFormData] = useState<CertificateFormData>({
     ...initialFormData,
+    ...initialData,
     org_inn: orgInn || '',
     org_kpp: orgKpp || '',
     org_name: orgName || '',
@@ -112,6 +115,18 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
     }
 
     setSubmitting(true);
+
+    // Draft created by the org: update the existing row instead of inserting.
+    if (draftExists) {
+      const { error } = await api.certificates.complete(formId, formData);
+      setSubmitting(false);
+      if (error) {
+        setSubmitError('Не удалось отправить форму. Попробуйте позже.');
+        return;
+      }
+      setSubmitted(true);
+      return;
+    }
 
     let resolvedOrgId = orgId;
 

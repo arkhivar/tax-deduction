@@ -200,6 +200,27 @@ export const api = {
       });
     },
 
+    // --- Create a draft from the org dashboard (org auth) ---
+    async createDraft(data: {
+      taxpayer_last_name: string;
+      taxpayer_first_name: string;
+      taxpayer_patronymic?: string;
+      expense_amount?: number;
+    }) {
+      return request<Certificate>('/certificates/draft', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
+    // --- Complete a draft via shared link (public, capability URL) ---
+    async complete(id: string, data: object) {
+      return request<Certificate>(`/certificates/${id}/complete`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+
     // --- Update by ID ---
     async update(id: string, data: object) {
       return request<Certificate>(`/certificates/${id}`, {

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Eye, Printer, Search, Filter, Copy, CheckCircle, Link2 } from 'lucide-react';
+import { RefreshCw, Eye, Printer, Search, Filter, Copy, CheckCircle, Link2, Plus } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { useOrg } from '../contexts/OrgContext';
 import { OrgLayout } from '../components/org/OrgLayout';
+import { CreateCertificateDialog } from '../components/org/CreateCertificateDialog';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: 'Черновик', color: 'bg-yellow-100 text-yellow-800' },
@@ -22,6 +23,7 @@ export function OrgDashboardPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const publicLink = `${window.location.origin}/${org?.slug || org?.inn}`;
 
@@ -148,6 +150,14 @@ export function OrgDashboardPage() {
             >
               <RefreshCw className={`w-4 h-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
             </button>
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors"
+              title="Новая справка"
+            >
+              <Plus className="w-4 h-4" />
+              Новая справка
+            </button>
           </div>
         </div>
 
@@ -217,6 +227,14 @@ export function OrgDashboardPage() {
           )}
         </div>
       </div>
+
+      {createOpen && org && (
+        <CreateCertificateDialog
+          orgSlug={org.slug || org.inn}
+          onClose={() => setCreateOpen(false)}
+          onCreated={fetchCertificates}
+        />
+      )}
     </OrgLayout>
   );
 }
