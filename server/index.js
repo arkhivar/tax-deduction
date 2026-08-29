@@ -32,7 +32,6 @@ const PORT = parseInt(process.env.PORT || '3001');
 // --- CORS: allow same-origin SPA + explicit known origins ---
 const allowedOrigins = [
   'https://xn--b1ag3bst.help',   // вычет.help (public HTTPS)
-  'http://100.102.56.22:8080',   // Netbird mesh access (knd.conf)
 ];
 
 // Allow requests where Origin matches the Host header (same-origin SPA).
