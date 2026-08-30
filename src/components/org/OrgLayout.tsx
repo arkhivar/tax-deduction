@@ -12,7 +12,6 @@ export function OrgLayout({ children }: OrgLayoutProps) {
 
   const navItems = [
     { to: '/org/dashboard', label: 'Справки', icon: LayoutDashboard },
-    { to: '/org/settings', label: 'Настройки', icon: Settings },
   ];
 
   return (
@@ -51,9 +50,14 @@ export function OrgLayout({ children }: OrgLayoutProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 hidden sm:block max-w-[200px] truncate">
-              {org?.name}
-            </span>
+            <Link
+              to="/org/settings"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 hover:underline underline-offset-4 transition-colors"
+              title="Настройки"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:block max-w-[200px] truncate">{org?.name}</span>
+            </Link>
             <button
               onClick={() => {
                 logout();
