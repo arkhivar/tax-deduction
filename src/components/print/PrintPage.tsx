@@ -215,7 +215,7 @@ export function PrintPage({ cert, qrUrl }: PrintPageProps) {
           </div>
           <p className="text-[8px] text-gray-500 text-center mt-0.5">(фамилия, имя, отчество)</p>
         </div>
-        <div className="border border-gray-400 w-24 h-24 flex items-center justify-center text-[9px] text-gray-400">
+        <div className="border border-gray-400 w-36 h-36 -mt-6 flex items-center justify-center text-[9px] text-gray-400">
           {qrUrl ? (
             <img src={qrUrl} alt="QR" className="w-full h-full object-contain" />
           ) : (
