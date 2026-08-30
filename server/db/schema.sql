@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   stamp_url       text,
   facsimile_url   text,
   admin_notes     text        NOT NULL DEFAULT '',
+  premium_requested_at timestamptz,                      -- set when org clicks the branded-link CTA
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
 );

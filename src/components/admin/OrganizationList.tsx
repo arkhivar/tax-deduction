@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   RefreshCw, Search, KeyRound, Copy, Check, Save, FileText, Clock,
-  Pencil, X, Settings,
+  Pencil, X, Settings, Sparkles,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { Organization } from '../../types/certificate';
@@ -14,13 +14,9 @@ interface OrgStats {
   pending: number;
 }
 
-interface OrganizationListProps {
-  onBack: () => void;
-}
-
 const RESERVED_SLUGS = ['form', 'org', 'print', 'admin', 'api', 'login', 'register', 's'];
 
-export function OrganizationList({ onBack }: OrganizationListProps) {
+export function OrganizationList() {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,12 +194,13 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
 
   const globalStats = stats['__global__'];
   const isPremiumSlug = (org: Organization) => org.slug !== org.inn;
+  const premiumRequests = orgs.filter((o) => o.premium_requested_at).length;
 
   return (
-    <AdminLayout title="Организации" onBack={onBack}>
+    <AdminLayout title="Организации">
       <div className="space-y-4">
         {globalStats && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
               <FileText className="w-4 h-4 text-blue-500" />
               <div className="text-sm">
@@ -216,6 +213,13 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
               <div className="text-sm">
                 <span className="text-gray-500">Ожидают:</span>{' '}
                 <span className="font-semibold text-amber-600">{globalStats.pending}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <Sparkles className="w-4 h-4 text-teal-500" />
+              <div className="text-sm">
+                <span className="text-gray-500">Premium-заявки:</span>{' '}
+                <span className="font-semibold text-teal-600">{premiumRequests}</span>
               </div>
             </div>
           </div>
@@ -279,10 +283,16 @@ export function OrganizationList({ onBack }: OrganizationListProps) {
                       <tr key={org.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3 text-gray-900 max-w-[220px]">
                           <div
-                            className="truncate font-medium cursor-default"
+                            className="truncate font-medium cursor-default flex items-center gap-1.5"
                             title={`ИНН: ${org.inn}${org.kpp ? ` / КПП: ${org.kpp}` : ''}${org.full_name ? `\n${org.full_name}` : ''}`}
                           >
                             {org.name || org.full_name || '-'}
+                            {org.premium_requested_at && (
+                              <Sparkles
+                                className="w-3.5 h-3.5 text-teal-500 shrink-0"
+                                aria-label={`Заявка на брендированную ссылку от ${formatDate(org.premium_requested_at)}`}
+                              />
+                            )}
                           </div>
                           <div className="text-[11px] text-gray-400 mt-0.5 font-mono">
                             {org.inn}{org.kpp ? ` / ${org.kpp}` : ''}

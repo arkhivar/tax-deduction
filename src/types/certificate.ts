@@ -76,6 +76,7 @@ export interface Organization {
   stamp_url: string | null;
   facsimile_url: string | null;
   admin_notes: string;
+  premium_requested_at: string | null;
   created_at: string;
   updated_at: string;
 }

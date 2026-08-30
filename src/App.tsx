@@ -4,6 +4,7 @@ import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import { FormPage } from './pages/FormPage';
 import { PrintPage } from './pages/PrintPage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminHomePage } from './pages/AdminHomePage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { OrgLoginPage } from './pages/OrgLoginPage';
 import { OrgRegisterPage } from './pages/OrgRegisterPage';
@@ -14,6 +15,7 @@ import { OrgSettingsPage } from './pages/OrgSettingsPage';
 import { AdminOrgSettingsPage } from './pages/AdminOrgSettingsPage';
 import { OrgGuard } from './components/org/OrgGuard';
 import { AdminGuard } from './components/admin/AdminGuard';
+import { OrganizationList } from './components/admin/OrganizationList';
 
 function App() {
   return (
@@ -29,7 +31,9 @@ function App() {
             <Route path="/s/:formId" element={<FormPage />} />
 
             <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
+            <Route path="/admin" element={<AdminGuard><AdminHomePage /></AdminGuard>} />
+            <Route path="/admin/forms" element={<AdminGuard><AdminPage /></AdminGuard>} />
+            <Route path="/admin/orgs" element={<AdminGuard><OrganizationList /></AdminGuard>} />
             <Route path="/admin/org/:id/edit" element={<AdminOrgSettingsPage />} />
 
             <Route path="/org/login" element={<OrgLoginPage />} />

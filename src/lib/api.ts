@@ -161,6 +161,13 @@ export const api = {
       });
     },
 
+    // --- Record branded-link (premium) interest ---
+    async requestPremium(id: string) {
+      return request<Organization>(`/organizations/${id}/premium-interest`, {
+        method: 'POST',
+      });
+    },
+
     // --- Change PIN (server-side verification) ---
     async changePin(id: string, currentPin: string, newPin: string) {
       return request<Organization>(`/organizations/${id}/change-pin`, {

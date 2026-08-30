@@ -200,6 +200,28 @@ router.post('/:id/change-pin', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// --- Record interest in a branded (premium) slug ---
+// Idempotent: only the first CTA click is stored.
+router.post('/:id/premium-interest', requireAuth, async (req, res, next) => {
+  try {
+    if (req.auth.role === 'org' && req.auth.orgId !== req.params.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const result = await pool.query(
+      `UPDATE organizations
+       SET premium_requested_at = COALESCE(premium_requested_at, now()), updated_at = now()
+       WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+
+    const includePin = req.auth.role === 'admin';
+    res.json(sanitizeOrg(result.rows[0], includePin));
+  } catch (err) { next(err); }
+});
+
 // --- Get organization by ID ---
 // Auth required: org can only get own record, admin can get any.
 router.get('/:id', requireAuth, async (req, res, next) => {

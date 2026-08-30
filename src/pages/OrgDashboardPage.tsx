@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Eye, Printer, Search, Filter, Copy, CheckCircle, Link2, Plus } from 'lucide-react';
+import { RefreshCw, Eye, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
-import type { Certificate } from '../types/certificate';
+import type { Certificate, Organization } from '../types/certificate';
 import { useOrg } from '../contexts/OrgContext';
 import { OrgLayout } from '../components/org/OrgLayout';
 import { CreateCertificateDialog } from '../components/org/CreateCertificateDialog';
@@ -17,13 +17,13 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export function OrgDashboardPage() {
   usePageTitle('Личный кабинет');
-  const { org } = useOrg();
+  const { org, refreshOrg } = useOrg();
   const navigate = useNavigate();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [premiumSending, setPremiumSending] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
   const publicLink = `${getPublicOrigin()}/${org?.slug || org?.inn}`;
@@ -68,51 +68,45 @@ export function OrgDashboardPage() {
       minimumFractionDigits: 2,
     }).format(amount);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(publicLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const stats = {
-    total: certificates.length,
-    draft: certificates.filter((c) => c.status === 'draft').length,
-    completed: certificates.filter((c) => c.status === 'completed').length,
-    printed: certificates.filter((c) => c.status === 'printed').length,
+  const handlePremiumRequest = async () => {
+    if (!org) return;
+    setPremiumSending(true);
+    const { data } = await api.organizations.requestPremium(org.id);
+    setPremiumSending(false);
+    if (data) refreshOrg(data as Organization);
   };
 
   return (
     <OrgLayout>
       <div className="space-y-5">
         <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Link2 className="w-4 h-4 text-gray-400" />
-              <code className="text-sm text-gray-700 truncate">{publicLink}</code>
-            </div>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300
-                bg-white hover:bg-gray-50 text-sm text-gray-700 transition-colors shrink-0"
-            >
-              {copied ? <CheckCircle className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Скопировано' : 'Копировать ссылку'}
-            </button>
+          <div className="flex items-center gap-3">
+            <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
+            <code className="text-sm text-gray-700 truncate">{publicLink}</code>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Всего', value: stats.total, color: 'text-gray-900' },
-            { label: 'Черновики', value: stats.draft, color: 'text-yellow-700' },
-            { label: 'Завершены', value: stats.completed, color: 'text-green-700' },
-            { label: 'Напечатаны', value: stats.printed, color: 'text-blue-700' },
-          ].map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-xs text-gray-500 mt-1">{s.label}</div>
-            </div>
-          ))}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100">
+            <p className="text-sm text-gray-600">
+              Плательщики находят вашу организацию только по ИНН. Хотите брендированную ссылку
+              вида <code className="text-gray-800">{getPublicOrigin()}/speak</code>? Сделаем короткий
+              узнаваемый адрес — бесплатно для организаций с оборотом до 10&nbsp;млн&nbsp;₽.
+            </p>
+            {org?.premium_requested_at ? (
+              <span className="flex items-center gap-1.5 text-sm text-green-700 shrink-0">
+                <CheckCircle className="w-4 h-4" />
+                Заявка принята — мы свяжемся с вами
+              </span>
+            ) : (
+              <button
+                onClick={handlePremiumRequest}
+                disabled={premiumSending}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-900 hover:bg-gray-800
+                  text-white text-sm font-medium transition-colors shrink-0 disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                {premiumSending ? 'Отправка...' : 'Хочу брендированную ссылку'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">

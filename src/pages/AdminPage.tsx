@@ -3,15 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { CertificateList } from '../components/admin/CertificateList';
 import { CertificateEdit } from '../components/admin/CertificateEdit';
-import { OrganizationList } from '../components/admin/OrganizationList';
 
 type AdminView =
   | { type: 'certificates' }
-  | { type: 'edit'; id: string }
-  | { type: 'organizations' };
+  | { type: 'edit'; id: string };
 
 export function AdminPage() {
-  usePageTitle('Административная панель');
+  usePageTitle('Формы — административная панель');
   const [view, setView] = useState<AdminView>({ type: 'certificates' });
   const navigate = useNavigate();
 
@@ -29,17 +27,11 @@ export function AdminPage() {
     );
   }
 
-  if (view.type === 'organizations') {
-    return (
-      <OrganizationList onBack={() => setView({ type: 'certificates' })} />
-    );
-  }
-
   return (
     <CertificateList
       onView={(id) => setView({ type: 'edit', id })}
       onPrint={handlePrint}
-      onShowOrgs={() => setView({ type: 'organizations' })}
+      onShowOrgs={() => navigate('/admin/orgs')}
     />
   );
 }
