@@ -6,8 +6,8 @@ This file is a living note for the next maintainer (or future self). It captures
 
 - Frontend: React 18 + Vite + TypeScript + Tailwind CSS
 - Backend: Node.js + Express + PostgreSQL 16
-- Deployment: static `dist/` served by nginx at `62.181.44.176:80/443` (reverse proxy to app at `:8080`)
-- Source: `/root/tax-deduction/`
+- Deployment: static `dist/` served by nginx on the production VPS (`91.218.114.169:80/443`, domain `вычет.help`), reverse proxy to the Express API at `127.0.0.1:3001` (`knd-server.service`)
+- Production checkout: `/home/tax-deduction/` on the VPS (deploy = `git pull && npm run build && systemctl restart knd-server`); working copy: `/root/tax-deduction/`
 
 ## Technical debt / roadmap items
 
@@ -89,6 +89,24 @@ This file is a living note for the next maintainer (or future self). It captures
 **Backups:** The pre-change configs are at `/etc/nginx/conf.d/knd.conf.bak.*` and `/etc/nginx/conf.d/vychet-public.conf.bak.*`.
 
 **Note:** The `/assets/` location block should keep its `Cache-Control: public, immutable` header — hashed bundle filenames make aggressive caching safe there.
+
+### 5. Real server-side sessions (revocation, per-device list)
+
+**Status:** Deferred (decided 2026-08-30).
+
+**Context:** While building the sysadmin overview on `/admin` (auth audit, login counters — see `MONITORING.md`), we considered showing "active sessions". JWTs are stateless: nothing is tracked per token server-side, so true active sessions don't exist. The overview instead shows "orgs active in the last 7 days" from `login_events` / `organizations.last_login_at`, which we judged 100% sufficient for the current stage.
+
+**Why we should do it eventually:**
+- Token revocation (e.g. when a PIN is compromised or an employee leaves) — currently a leaked JWT stays valid for its full 7-day TTL.
+- Per-device session list for org admins ("вы вошли с ...").
+- Force-logout / "sign out everywhere" capability.
+
+**Migration plan when ready:**
+
+1. New table `sessions` (`id`, `org_id`, `created_at`, `last_seen_at`, `ip`, `user_agent`, `revoked_at`).
+2. Issue tokens with a session id (`jti`) referencing that table; `requireAuth` checks the session is unrevoked on each request (adds one indexed DB hit per API call).
+3. Admin/org UI to list and revoke sessions.
+4. Keep `login_events` as the audit log; sessions complement it, not replace it.
 
 ## Notes
 
