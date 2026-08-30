@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, ArrowLeft, Home, LayoutDashboard, Building2 } from 'lucide-react';
+import { ArrowLeft, FileText, Building2, LayoutDashboard, LogOut } from 'lucide-react';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -15,26 +16,24 @@ const NAV_ITEMS = [
 
 export function AdminLayout({ children, title, onBack }: AdminLayoutProps) {
   const location = useLocation();
+  const { logout } = useAdminAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-          {onBack ? (
-            <button
-              onClick={onBack}
-              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Назад</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-gray-900 text-sm">КНД 1151158</span>
-            </div>
+          {onBack && (
+            <>
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Назад</span>
+              </button>
+              <div className="h-5 w-px bg-gray-200" />
+            </>
           )}
-          <div className="h-5 w-px bg-gray-200" />
           <nav className="flex items-center gap-1">
             {NAV_ITEMS.map((item) => {
               const isActive = item.exact
@@ -57,14 +56,17 @@ export function AdminLayout({ children, title, onBack }: AdminLayoutProps) {
             })}
           </nav>
           <h1 className="text-sm font-medium text-gray-700 flex-1 text-right sm:text-left sm:pl-4">{title}</h1>
-          <Link
-            to="/"
-            className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-1.5 rounded-md transition-colors"
-            title="Вернуться к форме"
+          <button
+            onClick={() => {
+              logout();
+              window.location.href = '/';
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-600
+              hover:text-gray-900 hover:bg-gray-50 transition-colors"
           >
-            <Home className="w-4 h-4" />
-            <span className="hidden sm:inline">Вернуться к форме</span>
-          </Link>
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Выйти</span>
+          </button>
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">{children}</main>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { Printer, ArrowLeft, QrCode, Stamp, PenLine, Home } from 'lucide-react';
+import { Printer, ArrowLeft, QrCode, Stamp, PenLine } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { PrintPage } from '../components/print/PrintPage';
@@ -58,14 +58,6 @@ export function OrgPrintPage() {
             {org?.facsimile_url && (
               <ToggleButton icon={PenLine} label="Подпись" active={showFacsimile} onClick={() => setShowFacsimile(!showFacsimile)} />
             )}
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md transition-colors"
-              title="Вернуться к форме"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Вернуться к форме</span>
-            </Link>
             <button
               onClick={() => window.print()}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-800
