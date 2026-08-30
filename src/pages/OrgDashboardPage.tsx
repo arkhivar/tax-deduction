@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Eye, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles } from 'lucide-react';
+import { RefreshCw, Pencil, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate, Organization } from '../types/certificate';
 import { useOrg } from '../contexts/OrgContext';
 import { OrgLayout } from '../components/org/OrgLayout';
 import { CreateCertificateDialog } from '../components/org/CreateCertificateDialog';
+import { InlineEditCell } from '../components/org/InlineEditCell';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: 'Черновик', color: 'bg-yellow-100 text-yellow-800' },
@@ -74,6 +75,30 @@ export function OrgDashboardPage() {
     const { data } = await api.organizations.requestPremium(org.id);
     setPremiumSending(false);
     if (data) refreshOrg(data as Organization);
+  };
+
+  // Inline table editing (draft rows only): apply the PATCH response to local state
+  const applyUpdate = async (id: string, fields: Record<string, unknown>): Promise<boolean> => {
+    const { data, error } = await api.certificates.update(id, fields);
+    if (error || !data) return false;
+    setCertificates((prev) => prev.map((c) => (c.id === id ? { ...c, ...(data as Certificate) } : c)));
+    return true;
+  };
+
+  const saveTaxpayerName = (cert: Certificate, raw: string) => {
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return Promise.resolve(false);
+    return applyUpdate(cert.id, {
+      taxpayer_last_name: parts[0].toUpperCase(),
+      taxpayer_first_name: parts[1].toUpperCase(),
+      taxpayer_patronymic: parts.slice(2).join(' ').toUpperCase(),
+    });
+  };
+
+  const saveAmount = (cert: Certificate, raw: string) => {
+    const amount = parseFloat(raw.replace(/\s/g, '').replace(',', '.'));
+    if (isNaN(amount) || amount < 0) return Promise.resolve(false);
+    return applyUpdate(cert.id, { expense_amount: amount });
   };
 
   return (
@@ -184,11 +209,24 @@ export function OrgDashboardPage() {
                           {formatDate(cert.created_at)}
                         </td>
                         <td className="px-4 py-3 text-gray-900 font-medium">
-                          {cert.taxpayer_last_name} {cert.taxpayer_first_name}
-                          {cert.taxpayer_patronymic ? ` ${cert.taxpayer_patronymic}` : ''}
+                          <InlineEditCell
+                            value={`${cert.taxpayer_last_name} ${cert.taxpayer_first_name}${cert.taxpayer_patronymic ? ` ${cert.taxpayer_patronymic}` : ''}`}
+                            disabled={cert.status !== 'draft'}
+                            onSave={(raw) => saveTaxpayerName(cert, raw)}
+                          >
+                            {cert.taxpayer_last_name} {cert.taxpayer_first_name}
+                            {cert.taxpayer_patronymic ? ` ${cert.taxpayer_patronymic}` : ''}
+                          </InlineEditCell>
                         </td>
                         <td className="px-4 py-3 text-gray-900 text-right whitespace-nowrap font-mono">
-                          {formatAmount(cert.expense_amount)}
+                          <InlineEditCell
+                            value={String(cert.expense_amount)}
+                            disabled={cert.status !== 'draft'}
+                            inputClassName="text-right font-mono"
+                            onSave={(raw) => saveAmount(cert, raw)}
+                          >
+                            {formatAmount(cert.expense_amount)}
+                          </InlineEditCell>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
@@ -200,9 +238,9 @@ export function OrgDashboardPage() {
                             <button
                               onClick={() => navigate(`/org/certificates/${cert.id}`)}
                               className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                              title="Просмотреть"
+                              title="Редактировать"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Pencil className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => navigate(`/org/print/${cert.id}`)}
