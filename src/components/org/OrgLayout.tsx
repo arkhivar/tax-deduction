@@ -21,11 +21,11 @@ export function OrgLayout({ children }: OrgLayoutProps) {
           <div className="flex items-center gap-4">
             <Link
               to="/"
-              className="flex items-center gap-2 text-gray-900 hover:underline underline-offset-4"
+              className="group flex items-center gap-2 text-gray-900"
               title="Вернуться к форме"
             >
               <FileText className="w-5 h-5 text-gray-700" />
-              <span className="font-semibold text-sm hidden sm:block">Форма КНД 1151158</span>
+              <span className="font-semibold text-sm hidden sm:block group-hover:underline underline-offset-4">Форма КНД 1151158</span>
             </Link>
             <div className="h-5 w-px bg-gray-200" />
             <nav className="flex items-center gap-1">
@@ -52,11 +52,11 @@ export function OrgLayout({ children }: OrgLayoutProps) {
           <div className="flex items-center gap-3">
             <Link
               to="/org/settings"
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 hover:underline underline-offset-4 transition-colors"
+              className="group flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors"
               title="Настройки"
             >
               <Settings className="w-4 h-4" />
-              <span className="hidden sm:block max-w-[200px] truncate">{org?.name}</span>
+              <span className="hidden sm:block max-w-[200px] truncate group-hover:underline underline-offset-4">{org?.name}</span>
             </Link>
             <button
               onClick={() => {
