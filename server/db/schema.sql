@@ -26,11 +26,27 @@ CREATE TABLE IF NOT EXISTS organizations (
   facsimile_url   text,
   admin_notes     text        NOT NULL DEFAULT '',
   premium_requested_at timestamptz,                      -- set when org clicks the branded-link CTA
+  last_login_at   timestamptz,                           -- last successful org login
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+
+-- ============================================================
+-- Table: login_events -- auth audit log (org + admin logins)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS login_events (
+  id         bigserial   PRIMARY KEY,
+  role       text        NOT NULL DEFAULT 'org',   -- 'org' | 'admin'
+  org_id     uuid        REFERENCES organizations(id) ON DELETE SET NULL,
+  inn        text,                                 -- attempted INN (org logins)
+  success    boolean     NOT NULL,
+  ip         text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at DESC);
 
 -- ============================================================
 -- Table: education_certificates

@@ -4,6 +4,20 @@ import { signOrgToken, signAdminToken, sanitizeOrg, requireAuth } from '../middl
 
 const router = Router();
 
+// Behind nginx: real client IP comes from X-Forwarded-For
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  return (typeof xff === 'string' ? xff.split(',')[0].trim() : req.ip) || null;
+}
+
+// Fire-and-forget audit log; never blocks or breaks the login flow
+function logLogin({ role, orgId = null, inn = null, success, ip }) {
+  pool.query(
+    'INSERT INTO login_events (role, org_id, inn, success, ip) VALUES ($1, $2, $3, $4, $5)',
+    [role, orgId, inn, success, ip]
+  ).catch((err) => console.error('[auth] login event log failed:', err.message));
+}
+
 /**
  * POST /api/auth/login
  * Organization login: verify INN + PIN, return JWT + sanitized org data.
@@ -25,8 +39,13 @@ router.post('/login', async (req, res, next) => {
 
     // Use generic error message to prevent org enumeration
     if (!org || org.pin_code !== pin) {
+      logLogin({ role: 'org', orgId: org?.id || null, inn, success: false, ip: clientIp(req) });
       return res.status(401).json({ error: 'Неверный ИНН или ПИН-код' });
     }
+
+    logLogin({ role: 'org', orgId: org.id, inn, success: true, ip: clientIp(req) });
+    pool.query('UPDATE organizations SET last_login_at = now() WHERE id = $1', [org.id])
+      .catch((err) => console.error('[auth] last_login_at update failed:', err.message));
 
     const token = signOrgToken(org.id);
     res.json({ token, org: sanitizeOrg(org) });
@@ -46,9 +65,11 @@ router.post('/admin', (req, res) => {
   }
 
   if (password !== process.env.ADMIN_PASSWORD) {
+    logLogin({ role: 'admin', success: false, ip: clientIp(req) });
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
+  logLogin({ role: 'admin', success: true, ip: clientIp(req) });
   const token = signAdminToken();
   res.json({ token });
 });

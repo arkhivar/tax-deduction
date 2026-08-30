@@ -79,6 +79,36 @@ export interface CertificateStatsRow {
   pending: string;
 }
 
+/** Response of GET /admin/overview (sysadmin home screen). */
+export interface AdminOverview {
+  logins24h: number;
+  failed24h: number;
+  failed7d: number;
+  recentEvents: {
+    created_at: string;
+    role: string;
+    inn: string | null;
+    success: boolean;
+    ip: string | null;
+    org_name: string | null;
+  }[];
+  activeOrgs: {
+    id: string;
+    name: string;
+    inn: string;
+    last_login_at: string;
+  }[];
+  system: {
+    apiUptimeSec: number;
+    hostUptimeSec: number;
+    loadavg: number[];
+    cpus: number;
+    memTotalMb: number;
+    memFreeMb: number;
+    node: string;
+  };
+}
+
 // ============================================================
 // Organizations
 // ============================================================
@@ -239,6 +269,13 @@ export const api = {
   },
 
   // ============================================================
+  // --- Sysadmin overview (admin home screen) ---
+  admin: {
+    async overview() {
+      return request<AdminOverview>('/admin/overview');
+    },
+  },
+
   // INN Lookup (proxies DaData API server-side)
   // ============================================================
 

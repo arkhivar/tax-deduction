@@ -9,6 +9,7 @@ import certRoutes from './routes/certificates.js';
 import innRoutes from './routes/inn-lookup.js';
 import assetRoutes from './routes/assets.js';
 import authRoutes from './routes/auth.js';
+import adminRoutes from './routes/admin.js';
 import { requireAdminAuth } from './middleware/auth.js';
 
 // --- Load .env file (no external dependency needed) ---
@@ -81,6 +82,7 @@ app.use('/api/organizations', orgRoutes);
 app.use('/api/certificates', certRoutes);
 app.use('/api/inn-lookup', apiLimiter, innRoutes);
 app.use('/api/assets', assetRoutes);
+app.use('/api/admin', adminRoutes);
 
 // --- Health check ---
 app.get('/api/health', (_req, res) => {
