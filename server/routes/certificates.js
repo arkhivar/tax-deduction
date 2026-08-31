@@ -309,4 +309,29 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// --- Delete a certificate by ID ---
+// Auth required: org can only delete certs belonging to their org, admin can delete any.
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    // For org users: verify ownership before delete
+    if (req.auth.role === 'org') {
+      const ownership = await pool.query(
+        'SELECT org_id FROM education_certificates WHERE id = $1',
+        [req.params.id]
+      );
+      if (!ownership.rows[0]) return res.status(404).json({ error: 'Not found' });
+      if (ownership.rows[0].org_id !== req.auth.orgId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
+    const result = await pool.query(
+      'DELETE FROM education_certificates WHERE id = $1 RETURNING id',
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json({ id: result.rows[0].id });
+  } catch (err) { next(err); }
+});
+
 export default router;

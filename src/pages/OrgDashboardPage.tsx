@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Pencil, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles } from 'lucide-react';
+import { RefreshCw, Pencil, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate, Organization } from '../types/certificate';
@@ -26,6 +26,23 @@ export function OrgDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [premiumSending, setPremiumSending] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyLink = (certId: string) => {
+    const link = `${getPublicOrigin()}/${org?.slug || org?.inn}/${certId}`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(certId);
+    setTimeout(() => setCopiedId((prev) => (prev === certId ? null : prev)), 2000);
+  };
+
+  const handleDelete = async (cert: Certificate) => {
+    const name = `${cert.taxpayer_last_name} ${cert.taxpayer_first_name}`.trim();
+    if (!window.confirm(`Удалить справку «${name}»? Действие необратимо.`)) return;
+    const { error } = await api.certificates.delete(cert.id);
+    if (!error) {
+      setCertificates((prev) => prev.filter((c) => c.id !== cert.id));
+    }
+  };
 
   const publicLink = `${getPublicOrigin()}/${org?.slug || org?.inn}`;
 
@@ -243,11 +260,29 @@ export function OrgDashboardPage() {
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleCopyLink(cert.id)}
+                              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                              title="Копировать ссылку для плательщика"
+                            >
+                              {copiedId === cert.id ? (
+                                <Check className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
                               onClick={() => navigate(`/org/print/${cert.id}`)}
                               className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                               title="Печать"
                             >
                               <Printer className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(cert)}
+                              className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                              title="Удалить"
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>

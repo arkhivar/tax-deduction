@@ -266,6 +266,13 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
+
+    // --- Delete by ID ---
+    async delete(id: string) {
+      return request<{ id: string }>(`/certificates/${id}`, {
+        method: 'DELETE',
+      });
+    },
   },
 
   // ============================================================
