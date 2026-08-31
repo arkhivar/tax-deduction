@@ -475,6 +475,19 @@ router.post('/:id/duplicate', requireAuth, async (req, res, next) => {
 
     await client.query('BEGIN');
     const certificateNumber = await generateCertificateNumber(client);
+
+    // Always assign the org's current default signer (even if the source doc
+    // has an empty or different one); fall back to the source value if the
+    // org has no default configured.
+    let defaultSigner = null;
+    if (src.rows[0].org_id) {
+      const r = await client.query(
+        'SELECT signer_full_name FROM organizations WHERE id = $1',
+        [src.rows[0].org_id]
+      );
+      defaultSigner = r.rows[0]?.signer_full_name || null;
+    }
+
     const result = await client.query(
       `INSERT INTO education_certificates (
          org_id, certificate_number, correction_number, report_year,
@@ -496,10 +509,10 @@ router.post('/:id/duplicate', requireAuth, async (req, res, next) => {
          student_last_name, student_first_name, student_patronymic,
          student_inn, student_birth_date, student_doc_type_code,
          student_doc_series_number, student_doc_issue_date,
-         signer_full_name, CURRENT_DATE, 'draft', admin_notes
+         COALESCE(NULLIF($3, ''), signer_full_name), CURRENT_DATE, 'draft', admin_notes
        FROM education_certificates WHERE id = $1
        RETURNING *`,
-      [req.params.id, certificateNumber]
+      [req.params.id, certificateNumber, defaultSigner || '']
     );
     await client.query('COMMIT');
     res.status(201).json(result.rows[0]);
