@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Pencil, Eye, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2, Share2, Mail, Send } from 'lucide-react';
+import { RefreshCw, Pencil, Eye, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2, Share2, Mail, Send, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate, Organization } from '../types/certificate';
@@ -85,12 +85,47 @@ export function OrgDashboardPage() {
     );
   });
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+  // Client-side sorting (null = server order: newest first)
+  const [sort, setSort] = useState<{ key: 'number' | 'taxpayer' | 'amount' | 'status'; dir: 1 | -1 } | null>(null);
+
+  const toggleSort = (key: 'number' | 'taxpayer' | 'amount' | 'status') => {
+    setSort((prev) => (prev?.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
+  };
+
+  const sortValues: Record<string, (c: Certificate) => string | number> = {
+    number: (c) => c.certificate_number || '',
+    taxpayer: (c) => `${c.taxpayer_last_name} ${c.taxpayer_first_name} ${c.taxpayer_patronymic}`.trim(),
+    amount: (c) => Number(c.expense_amount) || 0,
+    status: (c) => c.status,
+  };
+
+  const sorted = sort
+    ? [...filtered].sort((a, b) => {
+        const va = sortValues[sort.key](a);
+        const vb = sortValues[sort.key](b);
+        const cmp = typeof va === 'number' && typeof vb === 'number'
+          ? va - vb
+          : String(va).localeCompare(String(vb), 'ru');
+        return cmp * sort.dir;
+      })
+    : filtered;
+
+  const SortableTh = ({ label, sortKey, align = 'left' }: { label: string; sortKey: 'number' | 'taxpayer' | 'amount' | 'status'; align?: 'left' | 'right' }) => (
+    <th
+      onClick={() => toggleSort(sortKey)}
+      className={`px-4 py-3 font-medium text-gray-600 cursor-pointer select-none hover:text-gray-900 transition-colors ${align === 'right' ? 'text-right' : 'text-left'}`}
+      title="Сортировать"
+    >
+      <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+        {label}
+        {sort?.key === sortKey ? (
+          sort.dir === 1 ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+        ) : (
+          <ArrowUpDown className="w-3.5 h-3.5 opacity-30" />
+        )}
+      </span>
+    </th>
+  );
 
   const formatAmount = (amount: number) =>
     new Intl.NumberFormat('ru-RU', {
@@ -129,6 +164,12 @@ export function OrgDashboardPage() {
     const amount = parseFloat(raw.replace(/\s/g, '').replace(',', '.'));
     if (isNaN(amount) || amount < 0) return Promise.resolve(false);
     return applyUpdate(cert.id, { expense_amount: amount });
+  };
+
+  const saveCertificateNumber = (cert: Certificate, raw: string) => {
+    const value = raw.trim();
+    if (!value) return Promise.resolve(false);
+    return applyUpdate(cert.id, { certificate_number: value });
   };
 
   return (
@@ -223,20 +264,27 @@ export function OrgDashboardPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/60">
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Дата</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Налогоплательщик</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">Сумма</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Статус</th>
+                    <SortableTh label="Номер" sortKey="number" />
+                    <SortableTh label="Налогоплательщик" sortKey="taxpayer" />
+                    <SortableTh label="Сумма" sortKey="amount" align="right" />
+                    <SortableTh label="Статус" sortKey="status" />
                     <th className="text-right px-4 py-3 font-medium text-gray-600">Действия</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map((cert) => {
+                  {sorted.map((cert) => {
                     const status = STATUS_LABELS[cert.status] || STATUS_LABELS.draft;
                     return (
                       <tr key={cert.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                          {formatDate(cert.created_at)}
+                        <td className="px-4 py-3 text-gray-900 whitespace-nowrap font-mono">
+                          <InlineEditCell
+                            value={cert.certificate_number}
+                            disabled={cert.status !== 'draft'}
+                            inputClassName="font-mono"
+                            onSave={(raw) => saveCertificateNumber(cert, raw)}
+                          >
+                            {cert.certificate_number || '—'}
+                          </InlineEditCell>
                         </td>
                         <td className="px-4 py-3 text-gray-900 font-medium">
                           <InlineEditCell
