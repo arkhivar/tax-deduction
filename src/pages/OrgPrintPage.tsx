@@ -95,12 +95,12 @@ function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; q
         <img
           src={overlays.stampUrl}
           alt="Stamp"
-          className="absolute opacity-80"
+          className="absolute"
           style={{
-            right: '50mm',
-            bottom: '55mm',
-            width: '30mm',
-            height: '30mm',
+            right: '68mm',
+            bottom: '37mm',
+            width: '42mm',
+            height: '42mm',
             objectFit: 'contain',
             transform: 'rotate(-5deg)',
           }}
