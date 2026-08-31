@@ -71,7 +71,7 @@ router.post('/draft', requireOrgAuth, async (req, res, next) => {
     }
 
     const orgResult = await pool.query(
-      'SELECT inn, kpp, name FROM organizations WHERE id = $1',
+      'SELECT inn, kpp, name, signer_full_name FROM organizations WHERE id = $1',
       [req.auth.orgId]
     );
     if (!orgResult.rows[0]) return res.status(404).json({ error: 'Organization not found' });
@@ -82,13 +82,15 @@ router.post('/draft', requireOrgAuth, async (req, res, next) => {
          org_id, org_inn, org_kpp, org_name,
          taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic,
          expense_amount,
-         doc_type_code, doc_series_number, taxpayer_birth_date, doc_issue_date
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', '—', '1900-01-01', '1900-01-01')
+         doc_type_code, doc_series_number, taxpayer_birth_date, doc_issue_date,
+         signer_full_name, sign_date
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', '—', '1900-01-01', '1900-01-01', $9, CURRENT_DATE)
        RETURNING *`,
       [
         req.auth.orgId, org.inn, org.kpp, org.name,
         taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic || '',
         amount,
+        org.signer_full_name,
       ]
     );
 
