@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { Save, Printer, CheckCircle, ArrowLeft, Trash2 } from 'lucide-react';
+import { Save, Printer, CheckCircle, ArrowLeft, Trash2, Download, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { OrgLayout } from '../components/org/OrgLayout';
@@ -19,6 +19,14 @@ export function OrgCertificateEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!id) return;
+    setPdfBusy(true);
+    await api.certificates.downloadPdf(id);
+    setPdfBusy(false);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -133,6 +141,15 @@ export function OrgCertificateEditPage() {
             >
               <Printer className="w-4 h-4" />
               Печать
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={pdfBusy}
+              className="flex items-center p-2.5 rounded-lg border border-gray-300 bg-white
+                hover:bg-gray-50 text-gray-700 transition-colors disabled:opacity-50"
+              title="Скачать PDF"
+            >
+              {pdfBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             </button>
             <button
               onClick={handleSave}

@@ -273,6 +273,35 @@ export const api = {
         method: 'DELETE',
       });
     },
+
+    // --- Download PDF (rendered server-side from the print layout) ---
+    async downloadPdf(id: string): Promise<{ error: { message: string } | null }> {
+      const token = getToken();
+      try {
+        const res = await fetch(`${API_BASE}/certificates/${id}/pdf`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { error: { message: body.error || 'Не удалось сформировать PDF' } };
+        }
+        const blob = await res.blob();
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename\*=UTF-8''([^;]+)/);
+        const filename = match ? decodeURIComponent(match[1]) : 'certificate.pdf';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return { error: null };
+      } catch {
+        return { error: { message: 'Сетевая ошибка' } };
+      }
+    },
   },
 
   // ============================================================

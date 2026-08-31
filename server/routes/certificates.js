@@ -1,8 +1,75 @@
 import { Router } from 'express';
+import puppeteer from 'puppeteer';
 import { pool } from '../db/pool.js';
-import { requireAuth, requireOrgAuth, requireAdminAuth } from '../middleware/auth.js';
+import { requireAuth, requireOrgAuth, requireAdminAuth, signOrgToken } from '../middleware/auth.js';
 
 const router = Router();
+
+// --- Shared headless Chrome for server-side PDF rendering ---
+let browserPromise = null;
+function getBrowser() {
+  if (!browserPromise) {
+    browserPromise = puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    });
+    browserPromise
+      .then((b) => b.on('disconnected', () => { browserPromise = null; }))
+      .catch(() => { browserPromise = null; });
+  }
+  return browserPromise;
+}
+
+// --- Download certificate as PDF ---
+// Auth required: org can only download own certs, admin any.
+// Renders the existing /org/print/:id page in headless Chrome (the caller's
+// token is injected into localStorage so the SPA session restores), then
+// returns Chrome's print-to-PDF output — identical to manual Print → Save as PDF.
+router.get('/:id/pdf', requireAuth, async (req, res, next) => {
+  try {
+    const certRes = await pool.query(
+      'SELECT org_id, certificate_number, taxpayer_last_name FROM education_certificates WHERE id = $1',
+      [req.params.id]
+    );
+    const cert = certRes.rows[0];
+    if (!cert) return res.status(404).json({ error: 'Not found' });
+    if (req.auth.role === 'org' && cert.org_id !== req.auth.orgId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // The print page requires an org session; admins get a scoped token for the cert's org
+    let token = req.headers.authorization.slice(7);
+    if (req.auth.role === 'admin') {
+      if (!cert.org_id) return res.status(400).json({ error: 'Certificate is not linked to an organization' });
+      token = signOrgToken(cert.org_id);
+    }
+
+    const base = process.env.PUBLIC_ORIGIN || 'https://xn--b1ag3bst.help';
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    try {
+      await page.evaluateOnNewDocument((t) => {
+        try { localStorage.setItem('knd_token', t); } catch { /* ignore */ }
+      }, token);
+      await page.goto(`${base}/org/print/${req.params.id}`, { waitUntil: 'networkidle0', timeout: 45000 });
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      });
+
+      const rawName = `Справка ${cert.taxpayer_last_name || ''} ${cert.certificate_number || ''}`.trim() || 'certificate';
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="certificate.pdf"; filename*=UTF-8''${encodeURIComponent(`${rawName}.pdf`)}`
+      );
+      res.send(Buffer.from(pdf));
+    } finally {
+      await page.close();
+    }
+  } catch (err) { next(err); }
+});
 
 // --- List certificates (with optional org_id or status filter) ---
 // Auth required: org sees only own certs, admin sees all.

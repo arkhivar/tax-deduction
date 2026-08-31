@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Pencil, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2 } from 'lucide-react';
+import { RefreshCw, Pencil, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate, Organization } from '../types/certificate';
@@ -27,6 +27,13 @@ export function OrgDashboardPage() {
   const [premiumSending, setPremiumSending] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
+
+  const handleDownloadPdf = async (certId: string) => {
+    setPdfBusyId(certId);
+    await api.certificates.downloadPdf(certId);
+    setPdfBusyId(null);
+  };
 
   const handleCopyLink = (certId: string) => {
     const link = `${getPublicOrigin()}/${org?.slug || org?.inn}/${certId}`;
@@ -276,6 +283,18 @@ export function OrgDashboardPage() {
                               title="Печать"
                             >
                               <Printer className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDownloadPdf(cert.id)}
+                              disabled={pdfBusyId === cert.id}
+                              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                              title="Скачать PDF"
+                            >
+                              {pdfBusyId === cert.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </button>
                             <button
                               onClick={() => handleDelete(cert)}
