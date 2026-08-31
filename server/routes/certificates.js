@@ -20,6 +20,22 @@ function getBrowser() {
   return browserPromise;
 }
 
+// Generate the daily certificate number: yy-mm-dd-NNN (ordinal of the day).
+// Runs inside the caller's transaction; the advisory lock serializes
+// concurrent inserts so ordinals never collide.
+async function generateCertificateNumber(client) {
+  await client.query(`SELECT pg_advisory_xact_lock(hashtext('cert-num-' || CURRENT_DATE::text))`);
+  const { rows } = await client.query(
+    `SELECT COUNT(*)::int AS n FROM education_certificates WHERE created_at::date = CURRENT_DATE`
+  );
+  const ordinal = String(rows[0].n + 1).padStart(3, '0');
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}-${ordinal}`;
+}
+
 // --- Download certificate as PDF ---
 // Auth required: org can only download own certs, admin any.
 // Renders the existing /org/print/:id page in headless Chrome (the caller's
@@ -154,24 +170,35 @@ router.post('/draft', requireOrgAuth, async (req, res, next) => {
     if (!orgResult.rows[0]) return res.status(404).json({ error: 'Organization not found' });
     const org = orgResult.rows[0];
 
-    const result = await pool.query(
-      `INSERT INTO education_certificates (
-         org_id, org_inn, org_kpp, org_name,
-         taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic,
-         expense_amount,
-         doc_type_code, doc_series_number, taxpayer_birth_date, doc_issue_date,
-         signer_full_name, sign_date
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', '—', '1900-01-01', '1900-01-01', $9, CURRENT_DATE)
-       RETURNING *`,
-      [
-        req.auth.orgId, org.inn, org.kpp, org.name,
-        taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic || '',
-        amount,
-        org.signer_full_name,
-      ]
-    );
-
-    res.status(201).json(result.rows[0]);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const certificateNumber = await generateCertificateNumber(client);
+      const result = await client.query(
+        `INSERT INTO education_certificates (
+           org_id, org_inn, org_kpp, org_name,
+           taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic,
+           expense_amount,
+           doc_type_code, doc_series_number, taxpayer_birth_date, doc_issue_date,
+           certificate_number, signer_full_name, sign_date
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', '—', '1900-01-01', '1900-01-01', $9, $10, CURRENT_DATE)
+         RETURNING *`,
+        [
+          req.auth.orgId, org.inn, org.kpp, org.name,
+          taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic || '',
+          amount,
+          certificateNumber,
+          org.signer_full_name,
+        ]
+      );
+      await client.query('COMMIT');
+      res.status(201).json(result.rows[0]);
+    } catch (txErr) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) { next(err); }
 });
 
@@ -235,37 +262,53 @@ router.post('/', async (req, res, next) => {
       if (!body.sign_date) body.sign_date = new Date().toLocaleDateString('en-CA');
     }
 
-    // Get all columns from the request body that match table columns
-    const allowedCols = [
-      'id', 'org_id', 'certificate_number', 'correction_number', 'report_year',
-      'org_inn', 'org_kpp', 'org_name', 'is_full_time',
-      'taxpayer_last_name', 'taxpayer_first_name', 'taxpayer_patronymic',
-      'taxpayer_inn', 'taxpayer_birth_date', 'doc_type_code', 'doc_series_number',
-      'doc_issue_date', 'is_same_person', 'expense_amount',
-      'student_last_name', 'student_first_name', 'student_patronymic',
-      'student_inn', 'student_birth_date', 'student_doc_type_code',
-      'student_doc_series_number', 'student_doc_issue_date',
-      'signer_full_name', 'sign_date', 'status', 'admin_notes'
-    ];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    const cols = [];
-    const vals = [];
-    for (const col of allowedCols) {
-      if (col in body) {
-        cols.push(col);
-        vals.push(body[col]);
+      // Auto-assign the daily certificate number unless explicitly provided
+      if (!body.certificate_number) {
+        body.certificate_number = await generateCertificateNumber(client);
       }
+
+      // Get all columns from the request body that match table columns
+      const allowedCols = [
+        'id', 'org_id', 'certificate_number', 'correction_number', 'report_year',
+        'org_inn', 'org_kpp', 'org_name', 'is_full_time',
+        'taxpayer_last_name', 'taxpayer_first_name', 'taxpayer_patronymic',
+        'taxpayer_inn', 'taxpayer_birth_date', 'doc_type_code', 'doc_series_number',
+        'doc_issue_date', 'is_same_person', 'expense_amount',
+        'student_last_name', 'student_first_name', 'student_patronymic',
+        'student_inn', 'student_birth_date', 'student_doc_type_code',
+        'student_doc_series_number', 'student_doc_issue_date',
+        'signer_full_name', 'sign_date', 'status', 'admin_notes'
+      ];
+
+      const cols = [];
+      const vals = [];
+      for (const col of allowedCols) {
+        if (col in body) {
+          cols.push(col);
+          vals.push(body[col]);
+        }
+      }
+
+      const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+      const colList = cols.map((c) => `"${c}"`).join(', ');
+
+      const result = await client.query(
+        `INSERT INTO education_certificates (${colList}) VALUES (${placeholders}) RETURNING *`,
+        vals
+      );
+
+      await client.query('COMMIT');
+      res.status(201).json(result.rows[0]);
+    } catch (txErr) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
     }
-
-    const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
-    const colList = cols.map((c) => `"${c}"`).join(', ');
-
-    const result = await pool.query(
-      `INSERT INTO education_certificates (${colList}) VALUES (${placeholders}) RETURNING *`,
-      vals
-    );
-
-    res.status(201).json(result.rows[0]);
   } catch (err) { next(err); }
 });
 
