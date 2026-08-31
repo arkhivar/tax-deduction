@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Clock, CheckCircle, Printer, Plus, Link2, Copy, Check } from 'lucide-react';
 import type { Certificate } from '../../types/certificate';
+import { getPublicUrl } from '../../lib/publicLink';
 
 interface FormStatusViewProps {
   cert: Certificate;
@@ -30,7 +31,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: typeof Clock; color: 
 
 export function FormStatusView({ cert }: FormStatusViewProps) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = window.location.href;
+  const shareUrl = getPublicUrl();
   const displayUrl = shareUrl.length > 44 ? `${shareUrl.slice(0, 44)}…` : shareUrl;
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`;
   const vkUrl = `https://vk.com/share.php?url=${encodeURIComponent(shareUrl)}`;

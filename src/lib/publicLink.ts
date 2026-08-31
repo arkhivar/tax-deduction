@@ -81,3 +81,9 @@ export function toUnicodeOrigin(origin: string): string {
 export function getPublicOrigin(): string {
   return toUnicodeOrigin(window.location.origin);
 }
+
+/** Current page URL with an IDN domain shown in Unicode form. */
+export function getPublicUrl(): string {
+  const { pathname, search, hash } = window.location;
+  return `${getPublicOrigin()}${pathname}${search}${hash}`;
+}

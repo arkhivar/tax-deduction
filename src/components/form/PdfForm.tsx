@@ -10,6 +10,7 @@ import { padChars } from '../print/printHelpers';
 import { DocTypeSelect } from './DocTypeSelect';
 import { CornerSquares } from './CornerSquares';
 import { useInnLookup } from '../../hooks/useInnLookup';
+import { getPublicUrl } from '../../lib/publicLink';
 
 interface PdfFormProps {
   formId: string;
@@ -173,7 +174,7 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
   };
 
   if (submitted) {
-    const currentUrl = window.location.href;
+    const currentUrl = getPublicUrl();
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">

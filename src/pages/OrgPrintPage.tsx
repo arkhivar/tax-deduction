@@ -96,7 +96,7 @@ interface OverlayConfig {
 
 function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; qrUrl: string | null | undefined; overlays: OverlayConfig }) {
   return (
-    <div className="relative">
+    <div className="relative" style={{ width: '210mm' }}>
       <PrintPage cert={cert} qrUrl={qrUrl} />
       {overlays.stampUrl && (
         <img
@@ -104,7 +104,7 @@ function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; q
           alt="Stamp"
           className="absolute"
           style={{
-            right: '72mm',
+            right: '52.3mm',
             bottom: '41mm',
             width: '48mm',
             height: '48mm',
