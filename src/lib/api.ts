@@ -267,6 +267,13 @@ export const api = {
       });
     },
 
+    // --- Duplicate by ID (new number, today's date, draft status) ---
+    async duplicate(id: string) {
+      return request<Certificate>(`/certificates/${id}/duplicate`, {
+        method: 'POST',
+      });
+    },
+
     // --- Delete by ID ---
     async delete(id: string) {
       return request<{ id: string }>(`/certificates/${id}`, {

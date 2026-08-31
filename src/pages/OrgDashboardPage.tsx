@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Pencil, Eye, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2 } from 'lucide-react';
+import { RefreshCw, Pencil, Eye, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2, Share2, Mail, Send } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate, Organization } from '../types/certificate';
@@ -27,12 +27,18 @@ export function OrgDashboardPage() {
   const [premiumSending, setPremiumSending] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [shareOpenId, setShareOpenId] = useState<string | null>(null);
   const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const handleDownloadPdf = async (certId: string) => {
     setPdfBusyId(certId);
     await api.certificates.downloadPdf(certId);
     setPdfBusyId(null);
+  };
+
+  const handleDuplicate = async (certId: string) => {
+    const { error } = await api.certificates.duplicate(certId);
+    if (!error) fetchCertificates();
   };
 
   const handleCopyLink = (certId: string) => {
@@ -266,16 +272,49 @@ export function OrgDashboardPage() {
                             >
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => handleCopyLink(cert.id)}
-                              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                              title="Копировать ссылку для плательщика"
-                            >
-                              {copiedId === cert.id ? (
-                                <Check className="w-4 h-4 text-green-600" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
+                            <div className="relative">
+                              <button
+                                onClick={() => setShareOpenId(shareOpenId === cert.id ? null : cert.id)}
+                                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                title="Поделиться ссылкой"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </button>
+                              {shareOpenId === cert.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setShareOpenId(null)} />
+                                  <div className="absolute right-0 top-full mt-1 z-20 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 text-left">
+                                    <button
+                                      onClick={() => handleCopyLink(cert.id)}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                    >
+                                      {copiedId === cert.id ? (
+                                        <Check className="w-4 h-4 text-green-600 shrink-0" />
+                                      ) : (
+                                        <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
+                                      )}
+                                      {copiedId === cert.id ? 'Скопировано' : 'Копировать ссылку'}
+                                    </button>
+                                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 cursor-not-allowed">
+                                      <Mail className="w-4 h-4 shrink-0" />
+                                      <span className="flex-1">Email</span>
+                                      <span className="text-xs text-gray-300">скоро</span>
+                                    </div>
+                                    <div className="px-3 py-2 text-sm text-gray-400 flex items-center gap-2 cursor-not-allowed">
+                                      <Send className="w-4 h-4 shrink-0" />
+                                      <span className="flex-1">Telegram</span>
+                                      <span className="text-xs text-gray-300">скоро</span>
+                                    </div>
+                                  </div>
+                                </>
                               )}
+                            </div>
+                            <button
+                              onClick={() => handleDuplicate(cert.id)}
+                              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                              title="Дублировать"
+                            >
+                              <Copy className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => navigate(`/org/print/${cert.id}`)}

@@ -458,6 +458,59 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// --- Duplicate a certificate ---
+// Copies all data except: id (new UUID), created/updated timestamps,
+// certificate_number (new daily ordinal), sign_date (today) and status (draft).
+router.post('/:id/duplicate', requireAuth, async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const src = await client.query(
+      'SELECT org_id FROM education_certificates WHERE id = $1',
+      [req.params.id]
+    );
+    if (!src.rows[0]) return res.status(404).json({ error: 'Not found' });
+    if (req.auth.role === 'org' && src.rows[0].org_id !== req.auth.orgId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await client.query('BEGIN');
+    const certificateNumber = await generateCertificateNumber(client);
+    const result = await client.query(
+      `INSERT INTO education_certificates (
+         org_id, certificate_number, correction_number, report_year,
+         org_inn, org_kpp, org_name, is_full_time,
+         taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic,
+         taxpayer_inn, taxpayer_birth_date, doc_type_code, doc_series_number,
+         doc_issue_date, is_same_person, expense_amount,
+         student_last_name, student_first_name, student_patronymic,
+         student_inn, student_birth_date, student_doc_type_code,
+         student_doc_series_number, student_doc_issue_date,
+         signer_full_name, sign_date, status, admin_notes
+       )
+       SELECT
+         org_id, $2, correction_number, report_year,
+         org_inn, org_kpp, org_name, is_full_time,
+         taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic,
+         taxpayer_inn, taxpayer_birth_date, doc_type_code, doc_series_number,
+         doc_issue_date, is_same_person, expense_amount,
+         student_last_name, student_first_name, student_patronymic,
+         student_inn, student_birth_date, student_doc_type_code,
+         student_doc_series_number, student_doc_issue_date,
+         signer_full_name, CURRENT_DATE, 'draft', admin_notes
+       FROM education_certificates WHERE id = $1
+       RETURNING *`,
+      [req.params.id, certificateNumber]
+    );
+    await client.query('COMMIT');
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
 // --- Delete a certificate by ID ---
 // Auth required: org can only delete certs belonging to their org, admin can delete any.
 router.delete('/:id', requireAuth, async (req, res, next) => {
