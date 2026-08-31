@@ -263,7 +263,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
       'full_name', 'signer_full_name', 'signer_position', 'pin_code',
       'qr_code_url', 'stamp_url', 'facsimile_url', 'admin_notes',
       'slug', 'name', 'kpp', 'contact_email', 'contact_phone',
-      'facsimile_dx', 'facsimile_dy', 'facsimile_rotation'
+      'facsimile_dx', 'facsimile_dy', 'facsimile_rotation', 'facsimile_scale'
     ];
 
     // Facsimile alignment must be finite numbers within sane bounds
@@ -276,6 +276,13 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
         }
         req.body[key] = Math.max(-limit, Math.min(limit, num));
       }
+    }
+    if ('facsimile_scale' in req.body) {
+      const num = Number(req.body.facsimile_scale);
+      if (!Number.isFinite(num)) {
+        return res.status(400).json({ error: 'facsimile_scale must be a number' });
+      }
+      req.body.facsimile_scale = Math.max(0.3, Math.min(3, num));
     }
 
     // Org users cannot set admin_notes or slug (admin-only fields)

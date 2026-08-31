@@ -515,6 +515,7 @@ function FacsimileAligner({
   const [dx, setDx] = useState(org.facsimile_dx ?? 0);
   const [dy, setDy] = useState(org.facsimile_dy ?? 0);
   const [rotation, setRotation] = useState(org.facsimile_rotation ?? 0);
+  const [scale, setScale] = useState(org.facsimile_scale ?? 1);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -524,7 +525,8 @@ function FacsimileAligner({
     setDx(org.facsimile_dx ?? 0);
     setDy(org.facsimile_dy ?? 0);
     setRotation(org.facsimile_rotation ?? 0);
-  }, [org.facsimile_dx, org.facsimile_dy, org.facsimile_rotation, imageUrl]);
+    setScale(org.facsimile_scale ?? 1);
+  }, [org.facsimile_dx, org.facsimile_dy, org.facsimile_rotation, org.facsimile_scale, imageUrl]);
 
   const clampMm = (v: number) => Math.max(-30, Math.min(30, Math.round(v * 10) / 10));
 
@@ -551,6 +553,7 @@ function FacsimileAligner({
       facsimile_dx: dx,
       facsimile_dy: dy,
       facsimile_rotation: rotation,
+      facsimile_scale: scale,
     });
     setSaving(false);
     if (dbError || !data) {
@@ -566,6 +569,7 @@ function FacsimileAligner({
     setDx(0);
     setDy(0);
     setRotation(0);
+    setScale(1);
   };
 
   return (
@@ -594,7 +598,7 @@ function FacsimileAligner({
             width: 240,
             height: 96,
             touchAction: 'none',
-            transform: `translate(${dx * ALIGN_SCALE}px, ${dy * ALIGN_SCALE}px) rotate(${rotation}deg)`,
+            transform: `translate(${dx * ALIGN_SCALE}px, ${dy * ALIGN_SCALE}px) rotate(${rotation}deg) scale(${scale})`,
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -621,6 +625,19 @@ function FacsimileAligner({
           className="flex-1"
         />
         <span className="text-xs text-gray-500 w-12 text-right">{rotation}°</span>
+      </div>
+      <div className="flex items-center gap-3 mt-2">
+        <label className="text-xs text-gray-500 shrink-0">Размер</label>
+        <input
+          type="range"
+          min={0.5}
+          max={2}
+          step={0.05}
+          value={scale}
+          onChange={(e) => setScale(Number(e.target.value))}
+          className="flex-1"
+        />
+        <span className="text-xs text-gray-500 w-12 text-right">{Math.round(scale * 100)}%</span>
       </div>
       <div className="flex items-center gap-2 mt-3">
         <button

@@ -78,6 +78,7 @@ export interface Organization {
   facsimile_dx: number;
   facsimile_dy: number;
   facsimile_rotation: number;
+  facsimile_scale: number;
   admin_notes: string;
   premium_requested_at: string | null;
   created_at: string;
