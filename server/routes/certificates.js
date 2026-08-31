@@ -143,6 +143,21 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'doc_series_number required' });
     }
 
+    // Apply org defaults (default signer, today's sign date) when the
+    // certificate is linked to an organization and fields were not provided.
+    let defaultSigner = null;
+    if (body.org_id) {
+      const r = await pool.query('SELECT signer_full_name FROM organizations WHERE id = $1', [body.org_id]);
+      defaultSigner = r.rows[0]?.signer_full_name || null;
+    } else if (body.org_inn) {
+      const r = await pool.query('SELECT signer_full_name FROM organizations WHERE inn = $1', [body.org_inn]);
+      defaultSigner = r.rows[0]?.signer_full_name || null;
+    }
+    if (defaultSigner || body.org_id || body.org_inn) {
+      if (!body.signer_full_name && defaultSigner) body.signer_full_name = defaultSigner;
+      if (!body.sign_date) body.sign_date = new Date().toLocaleDateString('en-CA');
+    }
+
     // Get all columns from the request body that match table columns
     const allowedCols = [
       'id', 'org_id', 'certificate_number', 'correction_number', 'report_year',
@@ -185,12 +200,24 @@ router.post('/:id/complete', async (req, res, next) => {
     const body = req.body;
 
     const existing = await pool.query(
-      'SELECT status FROM education_certificates WHERE id = $1',
+      'SELECT status, org_id FROM education_certificates WHERE id = $1',
       [req.params.id]
     );
     if (!existing.rows[0]) return res.status(404).json({ error: 'Not found' });
     if (existing.rows[0].status !== 'draft') {
       return res.status(409).json({ error: 'Certificate already submitted' });
+    }
+
+    // Drafts created before org defaults existed: fill them in on completion
+    if (existing.rows[0].org_id) {
+      const r = await pool.query(
+        'SELECT signer_full_name FROM organizations WHERE id = $1',
+        [existing.rows[0].org_id]
+      );
+      if (!body.signer_full_name && r.rows[0]?.signer_full_name) {
+        body.signer_full_name = r.rows[0].signer_full_name;
+      }
+      if (!body.sign_date) body.sign_date = new Date().toLocaleDateString('en-CA');
     }
 
     // Map date fields: empty string -> null
