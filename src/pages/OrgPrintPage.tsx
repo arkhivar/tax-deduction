@@ -35,6 +35,11 @@ export function OrgPrintPage() {
   const overlays: OverlayConfig = {
     stampUrl: showStamp ? org?.stamp_url : null,
     facsimileUrl: showFacsimile ? org?.facsimile_url : null,
+    facsimileAlign: {
+      dx: org?.facsimile_dx ?? 0,
+      dy: org?.facsimile_dy ?? 0,
+      rotation: org?.facsimile_rotation ?? 0,
+    },
   };
 
   return (
@@ -85,6 +90,7 @@ export function OrgPrintPage() {
 interface OverlayConfig {
   stampUrl: string | null | undefined;
   facsimileUrl: string | null | undefined;
+  facsimileAlign: { dx: number; dy: number; rotation: number };
 }
 
 function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; qrUrl: string | null | undefined; overlays: OverlayConfig }) {
@@ -117,6 +123,7 @@ function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; q
             width: '60mm',
             height: '24mm',
             objectFit: 'contain',
+            transform: `translate(${overlays.facsimileAlign.dx}mm, ${overlays.facsimileAlign.dy}mm) rotate(${overlays.facsimileAlign.rotation}deg)`,
           }}
         />
       )}

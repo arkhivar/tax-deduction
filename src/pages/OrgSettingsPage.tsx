@@ -494,7 +494,158 @@ function ImageUploadSection({
         onChange={handleUpload}
         className="hidden"
       />
+      {field === 'facsimile_url' && currentUrl && (
+        <FacsimileAligner org={org} imageUrl={currentUrl} onUpdate={onUpdate} />
+      )}
     </Section>
+  );
+}
+
+const ALIGN_SCALE = 4; // px per mm in the preview
+
+function FacsimileAligner({
+  org,
+  imageUrl,
+  onUpdate,
+}: {
+  org: Organization;
+  imageUrl: string;
+  onUpdate: (o: Organization) => void;
+}) {
+  const [dx, setDx] = useState(org.facsimile_dx ?? 0);
+  const [dy, setDy] = useState(org.facsimile_dy ?? 0);
+  const [rotation, setRotation] = useState(org.facsimile_rotation ?? 0);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const dragRef = useRef<{ startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+
+  useEffect(() => {
+    setDx(org.facsimile_dx ?? 0);
+    setDy(org.facsimile_dy ?? 0);
+    setRotation(org.facsimile_rotation ?? 0);
+  }, [org.facsimile_dx, org.facsimile_dy, org.facsimile_rotation, imageUrl]);
+
+  const clampMm = (v: number) => Math.max(-30, Math.min(30, Math.round(v * 10) / 10));
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { startX: e.clientX, startY: e.clientY, baseDx: dx, baseDy: dy };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    setDx(clampMm(drag.baseDx + (e.clientX - drag.startX) / ALIGN_SCALE));
+    setDy(clampMm(drag.baseDy + (e.clientY - drag.startY) / ALIGN_SCALE));
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current = null;
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    const { data, error: dbError } = await api.organizations.update(org.id, {
+      facsimile_dx: dx,
+      facsimile_dy: dy,
+      facsimile_rotation: rotation,
+    });
+    setSaving(false);
+    if (dbError || !data) {
+      setError('Ошибка сохранения');
+      return;
+    }
+    onUpdate(data as Organization);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleReset = () => {
+    setDx(0);
+    setDy(0);
+    setRotation(0);
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <p className="text-xs text-gray-500 mb-2">
+        Красная линия — это поле «Подпись ______» на справке. Перетащите подпись так,
+        чтобы её нижний край стоял на линии, при необходимости поверните.
+      </p>
+      <div className="relative h-40 bg-white border border-gray-200 rounded-lg overflow-hidden select-none">
+        {/* default overlay box (60x24mm at 4px/mm) */}
+        <div
+          className="absolute border border-dashed border-gray-300 pointer-events-none"
+          style={{ left: 20, bottom: 20, width: 240, height: 96 }}
+        />
+        {/* the signature line from the certificate */}
+        <div
+          className="absolute left-0 right-0 border-t-2 border-red-400 pointer-events-none"
+          style={{ bottom: 20 }}
+        />
+        {/* draggable facsimile */}
+        <div
+          className="absolute cursor-grab active:cursor-grabbing"
+          style={{
+            left: 20,
+            bottom: 20,
+            width: 240,
+            height: 96,
+            touchAction: 'none',
+            transform: `translate(${dx * ALIGN_SCALE}px, ${dy * ALIGN_SCALE}px) rotate(${rotation}deg)`,
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          <img
+            src={imageUrl}
+            alt="Факсимиле"
+            draggable={false}
+            className="w-full h-full object-contain pointer-events-none"
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-3 mt-3">
+        <label className="text-xs text-gray-500 shrink-0">Поворот</label>
+        <input
+          type="range"
+          min={-20}
+          max={20}
+          step={0.5}
+          value={rotation}
+          onChange={(e) => setRotation(Number(e.target.value))}
+          className="flex-1"
+        />
+        <span className="text-xs text-gray-500 w-12 text-right">{rotation}°</span>
+      </div>
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {saved ? <CheckCircle className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+          {saving ? 'Сохранение...' : saved ? 'Сохранено' : 'Сохранить положение'}
+        </button>
+        <button
+          onClick={handleReset}
+          className="px-3 py-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-sm text-gray-700 transition-colors"
+        >
+          Сбросить
+        </button>
+        <span className="text-xs text-gray-400 ml-auto">x: {dx} мм, y: {dy} мм</span>
+      </div>
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mt-3">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+    </div>
   );
 }
 

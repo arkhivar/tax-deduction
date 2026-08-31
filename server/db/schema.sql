@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS organizations (
   qr_code_url     text,
   stamp_url       text,
   facsimile_url   text,
+  facsimile_dx    real        NOT NULL DEFAULT 0,        -- facsimile alignment: shift right, mm
+  facsimile_dy    real        NOT NULL DEFAULT 0,        -- facsimile alignment: shift down, mm
+  facsimile_rotation real     NOT NULL DEFAULT 0,        -- facsimile alignment: rotation, degrees
   admin_notes     text        NOT NULL DEFAULT '',
   premium_requested_at timestamptz,                      -- set when org clicks the branded-link CTA
   last_login_at   timestamptz,                           -- last successful org login
@@ -32,6 +35,11 @@ CREATE TABLE IF NOT EXISTS organizations (
 );
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+
+-- Facsimile alignment (for databases created before these columns existed)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS facsimile_dx real NOT NULL DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS facsimile_dy real NOT NULL DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS facsimile_rotation real NOT NULL DEFAULT 0;
 
 -- ============================================================
 -- Table: login_events -- auth audit log (org + admin logins)

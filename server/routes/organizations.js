@@ -262,8 +262,21 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
     const allowedFields = [
       'full_name', 'signer_full_name', 'signer_position', 'pin_code',
       'qr_code_url', 'stamp_url', 'facsimile_url', 'admin_notes',
-      'slug', 'name', 'kpp', 'contact_email', 'contact_phone'
+      'slug', 'name', 'kpp', 'contact_email', 'contact_phone',
+      'facsimile_dx', 'facsimile_dy', 'facsimile_rotation'
     ];
+
+    // Facsimile alignment must be finite numbers within sane bounds
+    const alignLimits = { facsimile_dx: 30, facsimile_dy: 30, facsimile_rotation: 45 };
+    for (const [key, limit] of Object.entries(alignLimits)) {
+      if (key in req.body) {
+        const num = Number(req.body[key]);
+        if (!Number.isFinite(num)) {
+          return res.status(400).json({ error: `${key} must be a number` });
+        }
+        req.body[key] = Math.max(-limit, Math.min(limit, num));
+      }
+    }
 
     // Org users cannot set admin_notes or slug (admin-only fields)
     if (req.auth.role === 'org') {
