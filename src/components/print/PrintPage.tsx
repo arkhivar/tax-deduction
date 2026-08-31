@@ -224,8 +224,8 @@ export function PrintPage({ cert, qrUrl }: PrintPageProps) {
         </div>
       </div>
 
-      <div className="flex items-baseline gap-4 mb-4">
-        <span className="text-[10px]">Подпись _______________</span>
+      <div className="flex items-baseline justify-between mb-4" style={{ width: '341px' }}>
+        <span className="text-[10px]">Подпись ______________________________</span>
         <span className="inline-flex items-baseline gap-1">
           <span className="text-[10px]">Дата</span>
           <DateCells {...signDate} />

@@ -112,10 +112,10 @@ function PrintPageWithOverlays({ cert, qrUrl, overlays }: { cert: Certificate; q
           alt="Facsimile"
           className="absolute"
           style={{
-            left: '30mm',
-            bottom: '52mm',
-            width: '30mm',
-            height: '12mm',
+            left: '20mm',
+            bottom: '72mm',
+            width: '60mm',
+            height: '24mm',
             objectFit: 'contain',
           }}
         />

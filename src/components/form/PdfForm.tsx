@@ -533,8 +533,8 @@ export function PdfForm({ formId, orgId, orgInn, orgKpp, orgName, orgLocked = fa
           </div>
         </div>
 
-        <div className="flex items-baseline gap-4 mb-4 opacity-40" title="Заполняется организацией">
-          <span className="text-[10px]">Подпись _______________</span>
+        <div className="flex items-baseline justify-between mb-4 opacity-40" style={{ width: '341px' }} title="Заполняется организацией">
+          <span className="text-[10px]">Подпись ______________________________</span>
           <span className="inline-flex items-baseline gap-1">
             <span className="text-[10px]">Дата</span>
             <CellRow chars={padChars('', 2)} />
