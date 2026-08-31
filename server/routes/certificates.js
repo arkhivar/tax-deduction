@@ -28,7 +28,9 @@ function getBrowser() {
 router.get('/:id/pdf', requireAuth, async (req, res, next) => {
   try {
     const certRes = await pool.query(
-      'SELECT org_id, certificate_number, taxpayer_last_name FROM education_certificates WHERE id = $1',
+      `SELECT org_id, report_year,
+              taxpayer_last_name, taxpayer_first_name, taxpayer_patronymic
+       FROM education_certificates WHERE id = $1`,
       [req.params.id]
     );
     const cert = certRes.rows[0];
@@ -58,7 +60,15 @@ router.get('/:id/pdf', requireAuth, async (req, res, next) => {
         margin: { top: 0, right: 0, bottom: 0, left: 0 },
       });
 
-      const rawName = `Справка ${cert.taxpayer_last_name || ''} ${cert.certificate_number || ''}`.trim() || 'certificate';
+      const cap = (s) => (s ? s.trim().charAt(0).toUpperCase() + s.trim().slice(1).toLowerCase() : '');
+      const initial = (s) => (s || '').trim().charAt(0).toUpperCase();
+      const nameParts = [
+        cap(cert.taxpayer_last_name),
+        `${initial(cert.taxpayer_first_name)}${initial(cert.taxpayer_patronymic)}`,
+        'форма 1151158',
+        cert.report_year ? `за ${cert.report_year}г` : '',
+      ].filter(Boolean);
+      const rawName = nameParts.join(' ').replace(/[/\\:*?"<>|]/g, '') || 'certificate';
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
