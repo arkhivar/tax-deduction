@@ -23,17 +23,25 @@ function getBrowser() {
 // Generate the daily certificate number: yy-mm-dd-NNN (ordinal of the day).
 // Runs inside the caller's transaction; the advisory lock serializes
 // concurrent inserts so ordinals never collide.
+// The next ordinal is MAX(existing suffix)+1, not COUNT+1, so deleted
+// certificates never cause a reused number.
 async function generateCertificateNumber(client) {
-  await client.query(`SELECT pg_advisory_xact_lock(hashtext('cert-num-' || CURRENT_DATE::text))`);
-  const { rows } = await client.query(
-    `SELECT COUNT(*)::int AS n FROM education_certificates WHERE created_at::date = CURRENT_DATE`
-  );
-  const ordinal = String(rows[0].n + 1).padStart(3, '0');
   const now = new Date();
   const yy = String(now.getFullYear()).slice(-2);
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const dd = String(now.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}-${ordinal}`;
+  const prefix = `${yy}-${mm}-${dd}`;
+
+  await client.query(`SELECT pg_advisory_xact_lock(hashtext('cert-num-' || $1))`, [prefix]);
+  const { rows } = await client.query(
+    `SELECT COALESCE(MAX(CAST(split_part(certificate_number, '-', 4) AS integer)), 0) AS max_n
+     FROM education_certificates
+     WHERE certificate_number LIKE $1 || '-%'
+       AND split_part(certificate_number, '-', 4) ~ '^[0-9]+$'`,
+    [prefix]
+  );
+  const ordinal = String(rows[0].max_n + 1).padStart(3, '0');
+  return `${prefix}-${ordinal}`;
 }
 
 // --- Download certificate as PDF ---
