@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { RefreshCw, Pencil, Printer, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2 } from 'lucide-react';
+import { RefreshCw, Pencil, Eye, Search, Filter, CheckCircle, Link2, Plus, Sparkles, Copy, Check, Trash2, Download, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { getPublicOrigin } from '../lib/publicLink';
 import type { Certificate, Organization } from '../types/certificate';
@@ -280,9 +280,9 @@ export function OrgDashboardPage() {
                             <button
                               onClick={() => navigate(`/org/print/${cert.id}`)}
                               className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                              title="Печать"
+                              title="Просмотр и печать"
                             >
-                              <Printer className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDownloadPdf(cert.id)}

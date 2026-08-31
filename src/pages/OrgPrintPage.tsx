@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { Printer, ArrowLeft, QrCode, Stamp, PenLine } from 'lucide-react';
+import { Printer, ArrowLeft, QrCode, Stamp, PenLine, Download, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { PrintPage } from '../components/print/PrintPage';
@@ -18,6 +18,14 @@ export function OrgPrintPage() {
   const [showQr, setShowQr] = useState(true);
   const [showStamp, setShowStamp] = useState(true);
   const [showFacsimile, setShowFacsimile] = useState(true);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!id) return;
+    setPdfBusy(true);
+    await api.certificates.downloadPdf(id);
+    setPdfBusy(false);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -65,12 +73,21 @@ export function OrgPrintPage() {
               <ToggleButton icon={PenLine} label="Подпись" active={showFacsimile} onClick={() => setShowFacsimile(!showFacsimile)} />
             )}
             <button
+              onClick={handleDownloadPdf}
+              disabled={pdfBusy}
+              className="flex items-center p-2 rounded-lg border border-gray-300 bg-white
+                hover:bg-gray-50 text-gray-700 transition-colors disabled:opacity-50"
+              title="Скачать PDF"
+            >
+              {pdfBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            </button>
+            <button
               onClick={() => window.print()}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 hover:bg-gray-800
-                text-white text-sm font-medium transition-colors"
+              className="flex items-center p-2 rounded-lg bg-gray-900 hover:bg-gray-800
+                text-white transition-colors"
+              title="Печать"
             >
               <Printer className="w-4 h-4" />
-              Печать
             </button>
           </div>
         </div>
