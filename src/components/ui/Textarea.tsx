@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   hasError?: boolean;
@@ -6,7 +6,23 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ hasError, uppercase, onChange, ...props }, ref) => {
+  ({ hasError, uppercase, onChange, value, ...props }, ref) => {
+    const innerRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const setRefs = (el: HTMLTextAreaElement | null) => {
+      innerRef.current = el;
+      if (typeof ref === 'function') ref(el);
+      else if (ref) ref.current = el;
+    };
+
+    // Grow the textarea to fit its content (rows acts as the minimum height)
+    useEffect(() => {
+      const el = innerRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }, [value]);
+
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (uppercase && e.target.value) {
         e.target.value = e.target.value.toUpperCase();
@@ -16,7 +32,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     return (
       <textarea
-        ref={ref}
+        ref={setRefs}
         className={`
           w-full px-3 py-2.5 rounded-lg border bg-white text-gray-900
           placeholder:text-gray-400 text-sm
@@ -29,6 +45,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ${uppercase ? 'uppercase' : ''}
           ${props.className || ''}
         `}
+        value={value}
         onChange={handleChange}
         {...props}
       />

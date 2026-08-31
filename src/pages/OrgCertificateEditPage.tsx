@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { Save, Printer, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Save, Printer, CheckCircle, ArrowLeft, Trash2 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Certificate } from '../types/certificate';
 import { OrgLayout } from '../components/org/OrgLayout';
@@ -75,6 +75,14 @@ export function OrgCertificateEditPage() {
     setSaved(true);
   };
 
+  const handleDelete = async () => {
+    if (!cert || !id) return;
+    const name = `${cert.taxpayer_last_name} ${cert.taxpayer_first_name}`.trim();
+    if (!window.confirm(`Удалить справку «${name}»? Действие необратимо.`)) return;
+    const { error } = await api.certificates.delete(id);
+    if (!error) navigate('/org/dashboard');
+  };
+
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('ru-RU', {
       day: '2-digit',
@@ -134,6 +142,14 @@ export function OrgCertificateEditPage() {
             >
               {saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
               {saving ? 'Сохранение...' : saved ? 'Сохранено' : 'Сохранить'}
+            </button>
+            <button
+              onClick={handleDelete}
+              className="flex items-center p-2.5 rounded-lg border border-red-200 bg-white
+                hover:bg-red-50 text-red-600 transition-colors"
+              title="Удалить справку"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
