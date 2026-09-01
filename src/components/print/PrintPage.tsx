@@ -7,6 +7,13 @@ import {
   splitTextToLines,
 } from './printHelpers';
 import { CornerSquares } from '../form/CornerSquares';
+import { DOC_TYPE_OPTIONS } from '../form/formHelpers';
+
+/** Human-readable document type name without the "NN - " prefix (for print). */
+export function docTypeNameOf(code: string | null | undefined): string {
+  const label = DOC_TYPE_OPTIONS.find((o) => o.value === code)?.label ?? '';
+  return label.split(' - ')[1] ?? '';
+}
 
 interface PrintPageProps {
   cert: Certificate;
@@ -26,6 +33,7 @@ export function PrintPage({ cert, qrUrl }: PrintPageProps) {
   const taxInnChars = padChars(cert.taxpayer_inn, 12);
   const birthDate = formatDateToCells(cert.taxpayer_birth_date);
   const docCodeChars = padChars(cert.doc_type_code, 2);
+  const docTypeName = docTypeNameOf(cert.doc_type_code);
   const docSeriesChars = padChars(cert.doc_series_number, 20);
   const issueDate = formatDateToCells(cert.doc_issue_date);
   const amount = formatAmountToCells(Number(cert.expense_amount) || 0);
@@ -163,8 +171,9 @@ export function PrintPage({ cert, qrUrl }: PrintPageProps) {
         }}
       >
         <span className="text-[10px] whitespace-nowrap text-right self-center">Код вида документа</span>
-        <span className="inline-flex items-baseline">
+        <span className="inline-flex items-baseline gap-2">
           <CellRow chars={docCodeChars} />
+          {docTypeName && <span className="text-[10px]">{docTypeName}</span>}
         </span>
         <span className="text-[10px] whitespace-nowrap text-right self-center">Серия и номер</span>
         <span className="w-full"><CellRow chars={docSeriesChars} /></span>

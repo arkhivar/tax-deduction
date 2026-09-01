@@ -2,6 +2,7 @@ import type { Certificate } from '../../types/certificate';
 import { CellRow, LabeledCells, DateCells } from './CellRow';
 import { padChars, formatDateToCells } from './printHelpers';
 import { CornerSquares } from '../form/CornerSquares';
+import { docTypeNameOf } from './PrintPage';
 
 interface PrintPage2Props {
   cert: Certificate;
@@ -16,6 +17,7 @@ export function PrintPage2({ cert }: PrintPage2Props) {
   const innChars = padChars(cert.student_inn, 12);
   const birthDate = formatDateToCells(cert.student_birth_date || '');
   const docCodeChars = padChars(cert.student_doc_type_code, 2);
+  const docTypeName = docTypeNameOf(cert.student_doc_type_code);
   const docSeriesChars = padChars(cert.student_doc_series_number, 20);
   const issueDate = formatDateToCells(cert.student_doc_issue_date || '');
   const signDate = formatDateToCells(cert.sign_date || '');
@@ -109,8 +111,9 @@ export function PrintPage2({ cert }: PrintPage2Props) {
         }}
       >
         <span className="text-[10px] whitespace-nowrap text-right self-center">Код вида документа</span>
-        <span className="inline-flex items-baseline">
+        <span className="inline-flex items-baseline gap-2">
           <CellRow chars={docCodeChars} />
+          {docTypeName && <span className="text-[10px]">{docTypeName}</span>}
         </span>
         <span className="text-[10px] whitespace-nowrap text-right self-center">Серия и номер</span>
         <span className="w-full"><CellRow chars={docSeriesChars} /></span>

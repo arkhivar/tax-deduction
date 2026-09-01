@@ -10,6 +10,21 @@ import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { DateInput } from '../components/ui/DateInput';
 import { SignerNameInput } from '../components/ui/SignerNameInput';
+import { DOC_TYPE_OPTIONS } from '../components/form/formHelpers';
+
+function DocTypeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+    >
+      {DOC_TYPE_OPTIONS.map((opt) => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+  );
+}
 
 export function OrgCertificateEditPage() {
   usePageTitle('Редактирование справки');
@@ -258,7 +273,7 @@ export function OrgCertificateEditPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <FormField label="Код документа">
-                <Input value={cert.doc_type_code} onChange={(e) => updateField('doc_type_code', e.target.value)} uppercase />
+                <DocTypeField value={cert.doc_type_code} onChange={(v) => updateField('doc_type_code', v)} />
               </FormField>
               <FormField label="Серия и номер">
                 <Input value={cert.doc_series_number} onChange={(e) => updateField('doc_series_number', e.target.value)} uppercase />
@@ -328,7 +343,7 @@ export function OrgCertificateEditPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <FormField label="Код документа">
-                  <Input value={cert.student_doc_type_code} onChange={(e) => updateField('student_doc_type_code', e.target.value)} uppercase />
+                  <DocTypeField value={cert.student_doc_type_code} onChange={(v) => updateField('student_doc_type_code', v)} />
                 </FormField>
                 <FormField label="Серия и номер">
                   <Input value={cert.student_doc_series_number} onChange={(e) => updateField('student_doc_series_number', e.target.value)} uppercase />
