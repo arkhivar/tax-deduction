@@ -12,10 +12,10 @@ export interface Certificate {
   taxpayer_first_name: string;
   taxpayer_patronymic: string;
   taxpayer_inn: string;
-  taxpayer_birth_date: string;
+  taxpayer_birth_date: string | null;
   doc_type_code: string;
-  doc_series_number: string;
-  doc_issue_date: string;
+  doc_series_number: string | null;
+  doc_issue_date: string | null;
   is_same_person: number;
   expense_amount: number;
   student_last_name: string;

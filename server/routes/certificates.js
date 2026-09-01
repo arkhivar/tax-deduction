@@ -189,7 +189,7 @@ router.post('/draft', requireOrgAuth, async (req, res, next) => {
            expense_amount,
            doc_type_code, doc_series_number, taxpayer_birth_date, doc_issue_date,
            certificate_number, signer_full_name, sign_date
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', '—', '1900-01-01', '1900-01-01', $9, $10, CURRENT_DATE)
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '21', NULL, NULL, NULL, $9, $10, CURRENT_DATE)
          RETURNING *`,
         [
           req.auth.orgId, org.inn, org.kpp, org.name,

@@ -35,7 +35,7 @@ function draftToFormData(cert: Certificate): Partial<CertificateFormData> {
     taxpayer_inn: cert.taxpayer_inn,
     taxpayer_birth_date: dateOrEmpty(cert.taxpayer_birth_date),
     doc_type_code: cert.doc_type_code || '21',
-    doc_series_number: cert.doc_series_number === '—' ? '' : cert.doc_series_number,
+    doc_series_number: cert.doc_series_number === '—' ? '' : (cert.doc_series_number || ''),
     doc_issue_date: dateOrEmpty(cert.doc_issue_date),
     is_same_person: cert.is_same_person,
     expense_amount: Number(cert.expense_amount) || 0,

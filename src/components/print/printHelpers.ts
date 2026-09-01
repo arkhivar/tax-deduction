@@ -1,5 +1,5 @@
-export function padChars(value: string, length: number): string[] {
-  const chars = value.split('');
+export function padChars(value: string | null | undefined, length: number): string[] {
+  const chars = (value || '').split('');
   const result: string[] = [];
   for (let i = 0; i < length; i++) {
     result.push(chars[i] || '');
@@ -7,7 +7,7 @@ export function padChars(value: string, length: number): string[] {
   return result;
 }
 
-export function formatDateToCells(dateStr: string): { day: string[]; month: string[]; year: string[] } {
+export function formatDateToCells(dateStr: string | null | undefined): { day: string[]; month: string[]; year: string[] } {
   if (!dateStr) {
     return { day: ['', ''], month: ['', ''], year: ['', '', '', ''] };
   }

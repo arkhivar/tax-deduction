@@ -43,6 +43,11 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS facsimile_dy real NOT NULL DE
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS facsimile_rotation real NOT NULL DEFAULT 0;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS facsimile_scale real NOT NULL DEFAULT 1;
 
+-- Passport details may be blank (org prints/sends the form for manual fill-in)
+ALTER TABLE education_certificates ALTER COLUMN taxpayer_birth_date DROP NOT NULL;
+ALTER TABLE education_certificates ALTER COLUMN doc_series_number DROP NOT NULL;
+ALTER TABLE education_certificates ALTER COLUMN doc_issue_date DROP NOT NULL;
+
 -- ============================================================
 -- Table: login_events -- auth audit log (org + admin logins)
 -- ============================================================
@@ -75,10 +80,10 @@ CREATE TABLE IF NOT EXISTS education_certificates (
   taxpayer_first_name     text            NOT NULL,
   taxpayer_patronymic     text            DEFAULT '',
   taxpayer_inn            text            DEFAULT '',
-  taxpayer_birth_date     date            NOT NULL,
+  taxpayer_birth_date     date,
   doc_type_code           text            NOT NULL,
-  doc_series_number       text            NOT NULL,
-  doc_issue_date          date            NOT NULL,
+  doc_series_number       text,
+  doc_issue_date          date,
   is_same_person          integer         DEFAULT 1 CHECK (is_same_person IN (0, 1)),
   expense_amount          numeric(15, 2)  NOT NULL DEFAULT 0,
   -- Student fields (page 2, filled when is_same_person = 0)

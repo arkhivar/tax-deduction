@@ -253,7 +253,7 @@ export function OrgCertificateEditPage() {
                 <Input value={cert.taxpayer_inn} onChange={(e) => updateField('taxpayer_inn', e.target.value.replace(/\D/g, '').slice(0, 12))} uppercase />
               </FormField>
               <FormField label="Дата рождения">
-                <DateInput value={cert.taxpayer_birth_date} onChange={(iso) => updateField('taxpayer_birth_date', iso)} />
+                <DateInput value={cert.taxpayer_birth_date || ''} onChange={(iso) => updateField('taxpayer_birth_date', iso)} />
               </FormField>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -264,7 +264,7 @@ export function OrgCertificateEditPage() {
                 <Input value={cert.doc_series_number} onChange={(e) => updateField('doc_series_number', e.target.value)} uppercase />
               </FormField>
               <FormField label="Дата выдачи">
-                <DateInput value={cert.doc_issue_date} onChange={(iso) => updateField('doc_issue_date', iso)} />
+                <DateInput value={cert.doc_issue_date || ''} onChange={(iso) => updateField('doc_issue_date', iso)} />
               </FormField>
             </div>
           </Section>
